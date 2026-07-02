@@ -9,7 +9,8 @@
     "lint": "eslint",
     "db:generate": "drizzle-kit generate",
     "db:migrate:prod": "tsx scripts/migrate.ts",
-    "db:reset": "rm -rf dev-db"
+    "db:reset": "rm -rf dev-db",
+    "test": "vitest run"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.3",
