@@ -9,6 +9,11 @@ const nextConfig: NextConfig = {
         hostname: "images.igdb.com",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "static-cdn.jtvnw.net",
+        pathname: "/**",
+      },
     ],
   },
 };
