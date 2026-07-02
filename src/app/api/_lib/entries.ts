@@ -1,0 +1,40 @@
+// Shared response serialization for the `entries` JSON API surface, used by
+// GET /api/entries, POST /api/entries, PATCH /api/entries/[id]/rerank, and
+// DELETE /api/entries/[id] — they all respond with (a view of) the same
+// ranked-entry list shape so the client can refresh its state in one
+// round trip.
+import type { RankedEntry } from "@/lib/ranking";
+import { releaseYearOf } from "./handler";
+
+export type SerializedEntry = {
+  id: number;
+  tier: RankedEntry["tier"];
+  position: number;
+  score: number;
+  globalRank: number;
+  game: {
+    id: number;
+    igdbId: number;
+    name: string;
+    coverImageId: string | null;
+    releaseYear: number | null;
+  };
+};
+
+/** Serializes an ordered list of ranked entries, assigning a 1-based `globalRank` by list order. */
+export function serializeEntries(entries: RankedEntry[]): SerializedEntry[] {
+  return entries.map((entry, index) => ({
+    id: entry.id,
+    tier: entry.tier,
+    position: entry.position,
+    score: entry.score,
+    globalRank: index + 1,
+    game: {
+      id: entry.game.id,
+      igdbId: entry.game.igdbId,
+      name: entry.game.name,
+      coverImageId: entry.game.coverImageId,
+      releaseYear: releaseYearOf(entry.game.firstReleaseDate),
+    },
+  }));
+}
