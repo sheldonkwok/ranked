@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.3",
+    "arctic": "^3.7.0",
     "drizzle-orm": "^0.45.2",
     "next": "16.2.10",
     "postgres": "^3.4.9",
@@ -30,6 +31,7 @@
     "eslint-config-next": "16.2.10",
     "tailwindcss": "^4",
     "tsx": "^4.22.4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.9"
   }
 }
