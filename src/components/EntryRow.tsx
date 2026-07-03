@@ -2,8 +2,10 @@ import Image from "next/image";
 import { coverUrl } from "@/lib/cover";
 import type { Tier } from "@/db/schema";
 import ScoreBadge from "@/components/ScoreBadge";
+import EntryActions from "@/components/EntryActions";
 
 export type EntryRowProps = {
+  id: number;
   rank: number;
   name: string;
   coverImageId: string | null;
@@ -13,6 +15,7 @@ export type EntryRowProps = {
 };
 
 export default function EntryRow({
+  id,
   rank,
   name,
   coverImageId,
@@ -46,6 +49,12 @@ export default function EntryRow({
       </div>
 
       <ScoreBadge score={score} tier={tier} />
+
+      <EntryActions
+        entryId={id}
+        game={{ name, coverImageId, releaseYear }}
+        tier={tier}
+      />
     </li>
   );
 }

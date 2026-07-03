@@ -7,6 +7,7 @@ export default function RankedList({ entries }: { entries: RankedEntry[] }) {
       {entries.map((entry, index) => (
         <EntryRow
           key={entry.id}
+          id={entry.id}
           rank={index + 1}
           name={entry.game.name}
           coverImageId={entry.game.coverImageId}
