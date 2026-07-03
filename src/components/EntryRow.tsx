@@ -1,8 +1,7 @@
-import Image from "next/image";
-import { coverUrl } from "@/lib/cover";
 import type { Tier } from "@/db/schema";
 import ScoreBadge from "@/components/ScoreBadge";
 import EntryActions from "@/components/EntryActions";
+import CoverImage from "@/components/CoverImage";
 
 export type EntryRowProps = {
   id: number;
@@ -29,17 +28,13 @@ export default function EntryRow({
         {rank}
       </span>
 
-      {coverImageId ? (
-        <Image
-          src={coverUrl(coverImageId, "cover_small")}
-          alt=""
-          width={40}
-          height={53}
-          className="h-[53px] w-10 shrink-0 rounded object-cover"
-        />
-      ) : (
-        <div className="h-[53px] w-10 shrink-0 rounded bg-zinc-200 dark:bg-zinc-800" />
-      )}
+      <CoverImage
+        coverImageId={coverImageId}
+        size="cover_small"
+        width={40}
+        height={53}
+        className="h-[53px] w-10 shrink-0 rounded"
+      />
 
       <div className="min-w-0 flex-1">
         <p className="truncate font-medium">{name}</p>

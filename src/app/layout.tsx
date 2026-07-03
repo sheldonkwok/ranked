@@ -16,8 +16,16 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Ranked",
+  title: {
+    default: "Ranked",
+    template: "%s — Ranked",
+  },
   description: "Rank the video games you've played, Beli-style.",
+  openGraph: {
+    title: "Ranked",
+    description: "Rank the video games you've played, Beli-style.",
+    type: "website",
+  },
 };
 
 export default async function RootLayout({

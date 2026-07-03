@@ -1,6 +1,6 @@
 "use client";
 
-import { coverUrl } from "@/lib/cover";
+import CoverImage from "@/components/CoverImage";
 
 type ComparisonGame = {
   name: string;
@@ -21,16 +21,11 @@ function CoverCard({
       onClick={onClick}
       className="flex flex-1 flex-col items-center gap-3 rounded-lg border border-zinc-200 p-4 text-center transition-colors hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:border-zinc-600 dark:hover:bg-zinc-900"
     >
-      <div className="aspect-[3/4] w-full max-w-40 overflow-hidden rounded bg-zinc-200 dark:bg-zinc-800">
-        {game.coverImageId ? (
-          // eslint-disable-next-line @next/next/no-img-element -- external IGDB CDN image, dimensions vary
-          <img
-            src={coverUrl(game.coverImageId, "cover_big")}
-            alt=""
-            className="h-full w-full object-cover"
-          />
-        ) : null}
-      </div>
+      <CoverImage
+        coverImageId={game.coverImageId}
+        size="cover_big"
+        className="aspect-[3/4] w-full max-w-40 rounded"
+      />
       <div className="flex flex-col gap-0.5">
         <span className="text-sm font-medium">{game.name}</span>
         {game.releaseYear && (
@@ -44,15 +39,15 @@ function CoverCard({
 export default function ComparisonModal({
   newGame,
   candidate,
-  onChoose,
-  onSkip,
+  onChooseAction,
+  onSkipAction,
   comparisonsDone,
   maxComparisons,
 }: {
   newGame: ComparisonGame;
   candidate: ComparisonGame;
-  onChoose: (newGameWins: boolean) => void;
-  onSkip: () => void;
+  onChooseAction: (newGameWins: boolean) => void;
+  onSkipAction: () => void;
   comparisonsDone: number;
   maxComparisons: number;
 }) {
@@ -67,16 +62,16 @@ export default function ComparisonModal({
         </div>
 
         <div className="flex items-stretch gap-4">
-          <CoverCard game={newGame} onClick={() => onChoose(true)} />
+          <CoverCard game={newGame} onClick={() => onChooseAction(true)} />
           <div className="flex items-center text-xs font-medium text-zinc-400">
             vs
           </div>
-          <CoverCard game={candidate} onClick={() => onChoose(false)} />
+          <CoverCard game={candidate} onClick={() => onChooseAction(false)} />
         </div>
 
         <button
           type="button"
-          onClick={onSkip}
+          onClick={onSkipAction}
           className="self-center text-xs text-zinc-400 underline-offset-2 hover:text-zinc-600 hover:underline dark:hover:text-zinc-300"
         >
           Too close — skip

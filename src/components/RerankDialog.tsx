@@ -35,12 +35,12 @@ export default function RerankDialog({
   entryId,
   game,
   currentTier,
-  onClose,
+  onCloseAction,
 }: {
   entryId: number;
   game: RerankGame;
   currentTier: Tier;
-  onClose: () => void;
+  onCloseAction: () => void;
 }) {
   const router = useRouter();
 
@@ -112,7 +112,7 @@ export default function RerankDialog({
 
       if (res.ok) {
         router.refresh();
-        onClose();
+        onCloseAction();
         return;
       }
 
@@ -162,9 +162,13 @@ export default function RerankDialog({
     <>
       <button
         type="button"
-        onClick={onClose}
+        onClick={onCloseAction}
+        disabled={phase === "submitting"}
         aria-label="Cancel re-rank"
-        className="fixed top-4 right-4 z-[60] rounded-full bg-white px-2.5 py-1 text-sm font-medium text-zinc-500 shadow-md hover:text-zinc-800 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+        title={
+          phase === "submitting" ? "Saving…" : "Cancel re-rank"
+        }
+        className="fixed top-4 right-4 z-[60] rounded-full bg-white px-2.5 py-1 text-sm font-medium text-zinc-500 shadow-md hover:text-zinc-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
       >
         ✕
       </button>
@@ -173,8 +177,8 @@ export default function RerankDialog({
         <ComparisonModal
           newGame={game}
           candidate={comparison.currentCandidate.game}
-          onChoose={comparison.choose}
-          onSkip={handleSkip}
+          onChooseAction={comparison.choose}
+          onSkipAction={handleSkip}
           comparisonsDone={comparison.comparisonsDone}
           maxComparisons={comparison.maxComparisons}
         />
@@ -253,7 +257,7 @@ export default function RerankDialog({
                       type="button"
                       onClick={() => {
                         router.refresh();
-                        onClose();
+                        onCloseAction();
                       }}
                       className="rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
                     >

@@ -1,4 +1,9 @@
+import type { Metadata } from "next";
 import AddFlow from "./AddFlow";
+
+export const metadata: Metadata = {
+  title: "Add a game",
+};
 
 export default function AddPage() {
   return (

@@ -99,7 +99,7 @@ export default function EntryActions({
           entryId={entryId}
           game={game}
           currentTier={tier}
-          onClose={() => setMode("idle")}
+          onCloseAction={() => setMode("idle")}
         />
       )}
     </div>

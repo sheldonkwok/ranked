@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { coverUrl } from "@/lib/cover";
+import CoverImage from "@/components/CoverImage";
 
 export type GameSearchResult = {
   igdbId: number;
@@ -24,9 +24,9 @@ const MIN_QUERY_LENGTH = 2;
 const DEBOUNCE_MS = 300;
 
 export default function GameSearch({
-  onSelect,
+  onSelectAction,
 }: {
-  onSelect: (game: GameSearchResult) => void;
+  onSelectAction: (game: GameSearchResult) => void;
 }) {
   const [query, setQuery] = useState("");
   const [state, setState] = useState<SearchState>({ kind: "idle" });
@@ -126,7 +126,9 @@ export default function GameSearch({
       {trimmedQuery.length >= MIN_QUERY_LENGTH &&
         state.kind === "results" &&
         state.results.length === 0 && (
-          <p className="text-sm text-zinc-500">No games found.</p>
+          <p className="text-sm text-zinc-500">
+            No games found for &quot;{trimmedQuery}&quot;.
+          </p>
         )}
 
       {trimmedQuery.length >= MIN_QUERY_LENGTH &&
@@ -138,19 +140,14 @@ export default function GameSearch({
               <button
                 type="button"
                 disabled={game.alreadyRanked}
-                onClick={() => onSelect(game)}
+                onClick={() => onSelectAction(game)}
                 className="flex w-full items-center gap-3 py-3 text-left disabled:cursor-not-allowed disabled:opacity-50 enabled:hover:bg-zinc-50 dark:enabled:hover:bg-zinc-900"
               >
-                <div className="h-16 w-12 shrink-0 overflow-hidden rounded bg-zinc-200 dark:bg-zinc-800">
-                  {game.coverImageId ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- external IGDB CDN image, dimensions vary
-                    <img
-                      src={coverUrl(game.coverImageId, "cover_small")}
-                      alt=""
-                      className="h-full w-full object-cover"
-                    />
-                  ) : null}
-                </div>
+                <CoverImage
+                  coverImageId={game.coverImageId}
+                  size="cover_small"
+                  className="h-16 w-12 shrink-0 rounded"
+                />
 
                 <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <div className="flex items-center gap-2">

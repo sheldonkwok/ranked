@@ -1,5 +1,10 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/session";
+
+export const metadata: Metadata = {
+  title: "Sign in",
+};
 
 type SignInPageProps = {
   searchParams: Promise<{ error?: string }>;

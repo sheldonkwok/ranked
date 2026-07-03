@@ -5,11 +5,11 @@ import { useRouter } from "next/navigation";
 import GameSearch, { type GameSearchResult } from "@/components/GameSearch";
 import TierPicker from "@/components/TierPicker";
 import ComparisonModal from "@/components/ComparisonModal";
+import CoverImage from "@/components/CoverImage";
 import {
   useComparisonRanking,
   type ComparisonCandidate,
 } from "@/hooks/useComparisonRanking";
-import { coverUrl } from "@/lib/cover";
 import type { Tier } from "@/db/schema";
 
 type Phase =
@@ -170,7 +170,9 @@ export default function AddFlow() {
 
   return (
     <div className="flex flex-col gap-6">
-      {phase === "search" && <GameSearch onSelect={handleSelectGame} />}
+      {phase === "search" && (
+        <GameSearch onSelectAction={handleSelectGame} />
+      )}
 
       {(phase === "tier" ||
         phase === "loading-candidates" ||
@@ -179,16 +181,11 @@ export default function AddFlow() {
         phase === "failed") &&
         selectedGame && (
           <div className="flex items-center gap-3 rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
-            <div className="h-16 w-12 shrink-0 overflow-hidden rounded bg-zinc-200 dark:bg-zinc-800">
-              {selectedGame.coverImageId ? (
-                // eslint-disable-next-line @next/next/no-img-element -- external IGDB CDN image, dimensions vary
-                <img
-                  src={coverUrl(selectedGame.coverImageId, "cover_small")}
-                  alt=""
-                  className="h-full w-full object-cover"
-                />
-              ) : null}
-            </div>
+            <CoverImage
+              coverImageId={selectedGame.coverImageId}
+              size="cover_small"
+              className="h-16 w-12 shrink-0 rounded"
+            />
             <div className="flex flex-col gap-0.5">
               <span className="text-sm font-medium">{selectedGame.name}</span>
               {selectedGame.releaseYear && (
@@ -238,8 +235,8 @@ export default function AddFlow() {
           <ComparisonModal
             newGame={selectedGame}
             candidate={comparison.currentCandidate.game}
-            onChoose={comparison.choose}
-            onSkip={handleSkip}
+            onChooseAction={comparison.choose}
+            onSkipAction={handleSkip}
             comparisonsDone={comparison.comparisonsDone}
             maxComparisons={comparison.maxComparisons}
           />
