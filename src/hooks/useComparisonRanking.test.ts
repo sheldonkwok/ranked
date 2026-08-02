@@ -19,10 +19,7 @@ function candidates(n: number): ComparisonCandidate[] {
 
 /** Runs a scripted sequence of `choose()` answers against a state, returning the final state. */
 function run(state: ComparisonState, answers: boolean[]): ComparisonState {
-  return answers.reduce(
-    (s, newGameWins) => comparisonReducer(s, { type: "choose", newGameWins }),
-    state
-  );
+  return answers.reduce((s, newGameWins) => comparisonReducer(s, { type: "choose", newGameWins }), state);
 }
 
 describe("createInitialState", () => {

@@ -27,9 +27,7 @@ export function badRequest(message: string): ApiError {
 }
 
 /** Wraps a route handler body, translating known errors into JSON responses. */
-export async function withErrorHandling(
-  fn: () => Promise<NextResponse>
-): Promise<NextResponse> {
+export async function withErrorHandling(fn: () => Promise<NextResponse>): Promise<NextResponse> {
   try {
     return await fn();
   } catch (err) {

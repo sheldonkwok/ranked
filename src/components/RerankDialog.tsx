@@ -5,17 +5,9 @@ import { useEffect, useRef, useState } from "react";
 import ComparisonModal from "@/components/ComparisonModal";
 import TierPicker from "@/components/TierPicker";
 import type { Tier } from "@/db/schema";
-import {
-  type ComparisonCandidate,
-  useComparisonRanking,
-} from "@/hooks/useComparisonRanking";
+import { type ComparisonCandidate, useComparisonRanking } from "@/hooks/useComparisonRanking";
 
-type Phase =
-  | "tier"
-  | "loading-candidates"
-  | "comparing"
-  | "submitting"
-  | "failed";
+type Phase = "tier" | "loading-candidates" | "comparing" | "submitting" | "failed";
 
 type FailureKind = "not_found" | "generic";
 
@@ -46,9 +38,7 @@ export default function RerankDialog({
 
   const [phase, setPhase] = useState<Phase>("tier");
   const [tier, setTier] = useState<Tier | null>(null);
-  const [candidates, setCandidates] = useState<ComparisonCandidate[] | null>(
-    null
-  );
+  const [candidates, setCandidates] = useState<ComparisonCandidate[] | null>(null);
   const [tierError, setTierError] = useState<string | null>(null);
   const [failure, setFailure] = useState<FailureKind | null>(null);
 
@@ -74,14 +64,10 @@ export default function RerankDialog({
     setPhase("loading-candidates");
 
     try {
-      const res = await fetch(
-        `/api/entries?tier=${encodeURIComponent(pickedTier)}&exclude=${entryId}`
-      );
+      const res = await fetch(`/api/entries?tier=${encodeURIComponent(pickedTier)}&exclude=${entryId}`);
 
       if (!res.ok) {
-        setTierError(
-          "Something went wrong loading your existing games. Try again."
-        );
+        setTierError("Something went wrong loading your existing games. Try again.");
         setPhase("tier");
         return;
       }
@@ -90,9 +76,7 @@ export default function RerankDialog({
       setCandidates(data.entries);
       setPhase("comparing");
     } catch {
-      setTierError(
-        "Something went wrong loading your existing games. Try again."
-      );
+      setTierError("Something went wrong loading your existing games. Try again.");
       setPhase("tier");
     }
   }
@@ -155,8 +139,7 @@ export default function RerankDialog({
   // During the comparing phase, ComparisonModal already renders its own
   // full-viewport overlay, so we render it standalone (no double overlay)
   // and rely on the persistent close button below for cancel.
-  const showComparisonModal =
-    phase === "comparing" && comparison.currentCandidate !== null;
+  const showComparisonModal = phase === "comparing" && comparison.currentCandidate !== null;
 
   return (
     <>
@@ -185,9 +168,7 @@ export default function RerankDialog({
           <div className="flex w-full max-w-lg flex-col gap-4 rounded-xl bg-white p-6 shadow-xl dark:bg-zinc-950">
             <div className="flex flex-col gap-1">
               <h2 className="text-lg font-semibold">Re-rank {game.name}</h2>
-              <p className="text-xs text-zinc-500">
-                Currently: {TIER_LABEL[currentTier]}
-              </p>
+              <p className="text-xs text-zinc-500">Currently: {TIER_LABEL[currentTier]}</p>
             </div>
 
             {phase === "tier" && (
@@ -211,8 +192,7 @@ export default function RerankDialog({
               </div>
             )}
 
-            {(phase === "submitting" ||
-              (phase === "comparing" && !comparison.currentCandidate)) && (
+            {(phase === "submitting" || (phase === "comparing" && !comparison.currentCandidate)) && (
               <div className="flex items-center gap-2 py-4 text-sm text-zinc-500">
                 <span
                   aria-hidden
@@ -237,18 +217,15 @@ export default function RerankDialog({
                 )}
 
                 <div className="flex gap-3">
-                  {failure === "generic" &&
-                    comparison.finalPosition !== null && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          submit(comparison.finalPosition as number)
-                        }
-                        className="rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
-                      >
-                        Try again
-                      </button>
-                    )}
+                  {failure === "generic" && comparison.finalPosition !== null && (
+                    <button
+                      type="button"
+                      onClick={() => submit(comparison.finalPosition as number)}
+                      className="rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+                    >
+                      Try again
+                    </button>
+                  )}
                   {failure === "not_found" ? (
                     <button
                       type="button"

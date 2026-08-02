@@ -81,10 +81,7 @@ function toRankedEntry(row: {
 }
 
 /** All of a user's entries, ordered by tier (liked, fine, disliked) then position. */
-export async function getRankedEntries(
-  dbOrTx: DbOrTx,
-  userId: string
-): Promise<RankedEntry[]> {
+export async function getRankedEntries(dbOrTx: DbOrTx, userId: string): Promise<RankedEntry[]> {
   const rows = await dbOrTx
     .select(rankedEntrySelection)
     .from(entries)
@@ -121,11 +118,7 @@ export async function getTierEntries(
   return rows.map(toRankedEntry);
 }
 
-async function countTierEntries(
-  tx: Tx,
-  userId: string,
-  tier: Tier
-): Promise<number> {
+async function countTierEntries(tx: Tx, userId: string, tier: Tier): Promise<number> {
   const [row] = await tx
     .select({ count: sql<number>`count(*)::int` })
     .from(entries)
@@ -152,13 +145,7 @@ export async function insertEntry(
   await tx
     .update(entries)
     .set({ position: sql`${entries.position} + 1` })
-    .where(
-      and(
-        eq(entries.userId, userId),
-        eq(entries.tier, tier),
-        gte(entries.position, clamped)
-      )
-    );
+    .where(and(eq(entries.userId, userId), eq(entries.tier, tier), gte(entries.position, clamped)));
 
   const [inserted] = await tx
     .insert(entries)
@@ -176,11 +163,7 @@ export async function insertEntry(
   return inserted.id;
 }
 
-async function loadOwnedEntry(
-  tx: Tx,
-  userId: string,
-  entryId: number
-): Promise<Entry> {
+async function loadOwnedEntry(tx: Tx, userId: string, entryId: number): Promise<Entry> {
   const [entry] = await tx
     .select()
     .from(entries)
@@ -216,24 +199,12 @@ export async function moveEntry(
   await tx
     .update(entries)
     .set({ position: sql`${entries.position} - 1` })
-    .where(
-      and(
-        eq(entries.userId, userId),
-        eq(entries.tier, oldTier),
-        gt(entries.position, oldPosition)
-      )
-    );
+    .where(and(eq(entries.userId, userId), eq(entries.tier, oldTier), gt(entries.position, oldPosition)));
 
   const [{ count }] = await tx
     .select({ count: sql<number>`count(*)::int` })
     .from(entries)
-    .where(
-      and(
-        eq(entries.userId, userId),
-        eq(entries.tier, newTier),
-        ne(entries.id, entryId)
-      )
-    );
+    .where(and(eq(entries.userId, userId), eq(entries.tier, newTier), ne(entries.id, entryId)));
 
   const clamped = Math.max(0, Math.min(newPosition, count));
 
@@ -266,11 +237,7 @@ export async function moveEntry(
  * Deletes an entry, closes the gap it left in its tier, and recomputes
  * that tier's scores.
  */
-export async function removeEntry(
-  tx: Tx,
-  userId: string,
-  entryId: number
-): Promise<void> {
+export async function removeEntry(tx: Tx, userId: string, entryId: number): Promise<void> {
   const entry = await loadOwnedEntry(tx, userId, entryId);
 
   await tx.delete(entries).where(eq(entries.id, entryId));
@@ -278,13 +245,7 @@ export async function removeEntry(
   await tx
     .update(entries)
     .set({ position: sql`${entries.position} - 1` })
-    .where(
-      and(
-        eq(entries.userId, userId),
-        eq(entries.tier, entry.tier),
-        gt(entries.position, entry.position)
-      )
-    );
+    .where(and(eq(entries.userId, userId), eq(entries.tier, entry.tier), gt(entries.position, entry.position)));
 
   await recomputeTierScores(tx, userId, entry.tier);
 }
@@ -294,11 +255,7 @@ export async function removeEntry(
  * (defensively) normalizes positions to a dense 0..n-1 range in the
  * process.
  */
-export async function recomputeTierScores(
-  tx: Tx,
-  userId: string,
-  tier: Tier
-): Promise<void> {
+export async function recomputeTierScores(tx: Tx, userId: string, tier: Tier): Promise<void> {
   const rows = await tx
     .select({ id: entries.id })
     .from(entries)

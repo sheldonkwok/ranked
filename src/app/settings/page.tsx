@@ -34,15 +34,9 @@ export default async function SettingsPage() {
       )}
 
       <div className="flex flex-col gap-1">
-        <h1 className="text-xl font-semibold">
-          {user.displayName ?? user.username}
-        </h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          @{user.username}
-        </p>
-        <p className="text-xs text-zinc-500 dark:text-zinc-500">
-          Member since {memberSince}
-        </p>
+        <h1 className="text-xl font-semibold">{user.displayName ?? user.username}</h1>
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">@{user.username}</p>
+        <p className="text-xs text-zinc-500 dark:text-zinc-500">Member since {memberSince}</p>
       </div>
 
       <SignOutButton />

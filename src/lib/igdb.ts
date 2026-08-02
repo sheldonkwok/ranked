@@ -24,9 +24,7 @@ type TokenCache = {
 
 let tokenCache: TokenCache | null = null;
 
-function getRequiredEnv(
-  name: "TWITCH_CLIENT_ID" | "TWITCH_CLIENT_SECRET"
-): string {
+function getRequiredEnv(name: "TWITCH_CLIENT_ID" | "TWITCH_CLIENT_SECRET"): string {
   const value = process.env[name];
   if (!value) {
     throw new Error(
@@ -63,9 +61,7 @@ async function fetchNewToken(): Promise<TokenCache> {
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(
-      `Failed to obtain Twitch OAuth token (status ${res.status}): ${text}`
-    );
+    throw new Error(`Failed to obtain Twitch OAuth token (status ${res.status}): ${text}`);
   }
 
   const data = (await res.json()) as TwitchTokenResponse;
@@ -84,11 +80,7 @@ async function getAccessToken(forceRefresh = false): Promise<string> {
   return fresh.accessToken;
 }
 
-async function performIgdbFetch(
-  endpoint: string,
-  body: string,
-  accessToken: string
-) {
+async function performIgdbFetch(endpoint: string, body: string, accessToken: string) {
   const clientId = getRequiredEnv("TWITCH_CLIENT_ID");
   return fetch(`${IGDB_API_BASE}/${endpoint}`, {
     method: "POST",
@@ -117,9 +109,7 @@ async function igdbRequest<T>(endpoint: string, body: string): Promise<T> {
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(
-      `IGDB request to "${endpoint}" failed (status ${res.status}): ${text}`
-    );
+    throw new Error(`IGDB request to "${endpoint}" failed (status ${res.status}): ${text}`);
   }
 
   return (await res.json()) as T;
@@ -143,8 +133,7 @@ type RawIgdbGame = {
   summary?: string | null;
 };
 
-const GAME_FIELDS =
-  "fields name, cover.image_id, first_release_date, platforms.abbreviation, summary;";
+const GAME_FIELDS = "fields name, cover.image_id, first_release_date, platforms.abbreviation, summary;";
 // Wider than the number of results shown client-side, since already-ranked
 // games are filtered out server-side after this fetch.
 const SEARCH_FETCH_LIMIT = 30;
@@ -154,13 +143,8 @@ function normalizeGame(raw: RawIgdbGame): IgdbGame {
     igdbId: raw.id,
     name: raw.name,
     coverImageId: raw.cover?.image_id ?? null,
-    firstReleaseDate:
-      typeof raw.first_release_date === "number"
-        ? new Date(raw.first_release_date * 1000)
-        : null,
-    platforms: (raw.platforms ?? [])
-      .map((p) => p.abbreviation)
-      .filter((abbr): abbr is string => Boolean(abbr)),
+    firstReleaseDate: typeof raw.first_release_date === "number" ? new Date(raw.first_release_date * 1000) : null,
+    platforms: (raw.platforms ?? []).map((p) => p.abbreviation).filter((abbr): abbr is string => Boolean(abbr)),
     summary: raw.summary ?? null,
   };
 }
@@ -176,13 +160,9 @@ export async function searchGames(query: string): Promise<IgdbGame[]> {
   return results.map(normalizeGame);
 }
 
-export async function getGameByIgdbId(
-  igdbId: number
-): Promise<IgdbGame | null> {
+export async function getGameByIgdbId(igdbId: number): Promise<IgdbGame | null> {
   if (!Number.isInteger(igdbId) || igdbId <= 0) {
-    throw new Error(
-      `getGameByIgdbId: igdbId must be a positive integer, got ${igdbId}`
-    );
+    throw new Error(`getGameByIgdbId: igdbId must be a positive integer, got ${igdbId}`);
   }
   const body = `${GAME_FIELDS} where id = ${igdbId}; limit 1;`;
   const results = await igdbRequest<RawIgdbGame[]>("games", body);

@@ -2,13 +2,7 @@
 
 import { useEffect } from "react";
 
-export default function ErrorBoundary({
-  error,
-  reset,
-}: {
-  error: Error & { digest?: string };
-  reset: () => void;
-}) {
+export default function ErrorBoundary({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
     // Log the error to the console (or an error reporting service).
     console.error(error);
@@ -17,9 +11,7 @@ export default function ErrorBoundary({
   return (
     <div className="flex flex-col items-center gap-4 py-16 text-center">
       <h1 className="text-xl font-semibold">Something went wrong</h1>
-      <p className="text-sm text-zinc-600 dark:text-zinc-400">
-        An unexpected error occurred. You can try again.
-      </p>
+      <p className="text-sm text-zinc-600 dark:text-zinc-400">An unexpected error occurred. You can try again.</p>
       <button
         type="button"
         onClick={reset}

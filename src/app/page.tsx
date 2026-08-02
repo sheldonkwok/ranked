@@ -17,9 +17,7 @@ export default async function Home() {
   if (entries.length === 0) {
     return (
       <div className="flex flex-col items-center gap-4 py-16 text-center">
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          You haven&apos;t ranked any games yet.
-        </p>
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">You haven&apos;t ranked any games yet.</p>
         <Link
           href="/add"
           className="rounded-full bg-zinc-900 px-5 py-2 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"

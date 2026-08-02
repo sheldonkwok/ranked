@@ -6,13 +6,7 @@ const TIER_STYLES: Record<Tier, string> = {
   disliked: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300",
 };
 
-export default function ScoreBadge({
-  score,
-  tier,
-}: {
-  score: number;
-  tier: Tier;
-}) {
+export default function ScoreBadge({ score, tier }: { score: number; tier: Tier }) {
   return (
     <span
       className={`inline-flex min-w-10 items-center justify-center rounded-full px-2.5 py-1 text-sm font-semibold tabular-nums ${TIER_STYLES[tier]}`}

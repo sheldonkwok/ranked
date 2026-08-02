@@ -7,18 +7,9 @@ import CoverImage from "@/components/CoverImage";
 import GameSearch, { type GameSearchResult } from "@/components/GameSearch";
 import TierPicker from "@/components/TierPicker";
 import type { Tier } from "@/db/schema";
-import {
-  type ComparisonCandidate,
-  useComparisonRanking,
-} from "@/hooks/useComparisonRanking";
+import { type ComparisonCandidate, useComparisonRanking } from "@/hooks/useComparisonRanking";
 
-type Phase =
-  | "search"
-  | "tier"
-  | "loading-candidates"
-  | "comparing"
-  | "submitting"
-  | "failed";
+type Phase = "search" | "tier" | "loading-candidates" | "comparing" | "submitting" | "failed";
 
 type FailureKind = "conflict" | "igdb" | "generic";
 
@@ -32,13 +23,9 @@ export default function AddFlow() {
   const router = useRouter();
 
   const [phase, setPhase] = useState<Phase>("search");
-  const [selectedGame, setSelectedGame] = useState<GameSearchResult | null>(
-    null
-  );
+  const [selectedGame, setSelectedGame] = useState<GameSearchResult | null>(null);
   const [tier, setTier] = useState<Tier | null>(null);
-  const [candidates, setCandidates] = useState<ComparisonCandidate[] | null>(
-    null
-  );
+  const [candidates, setCandidates] = useState<ComparisonCandidate[] | null>(null);
   const [tierError, setTierError] = useState<string | null>(null);
   const [failure, setFailure] = useState<FailureKind | null>(null);
 
@@ -79,14 +66,10 @@ export default function AddFlow() {
     setPhase("loading-candidates");
 
     try {
-      const res = await fetch(
-        `/api/entries?tier=${encodeURIComponent(pickedTier)}`
-      );
+      const res = await fetch(`/api/entries?tier=${encodeURIComponent(pickedTier)}`);
 
       if (!res.ok) {
-        setTierError(
-          "Something went wrong loading your existing games. Try again."
-        );
+        setTierError("Something went wrong loading your existing games. Try again.");
         setPhase("tier");
         return;
       }
@@ -95,9 +78,7 @@ export default function AddFlow() {
       setCandidates(data.entries);
       setPhase("comparing");
     } catch {
-      setTierError(
-        "Something went wrong loading your existing games. Try again."
-      );
+      setTierError("Something went wrong loading your existing games. Try again.");
       setPhase("tier");
     }
   }
@@ -186,16 +167,8 @@ export default function AddFlow() {
             />
             <div className="flex flex-col gap-0.5">
               <span className="text-sm font-medium">{selectedGame.name}</span>
-              {selectedGame.releaseYear && (
-                <span className="text-xs text-zinc-500">
-                  {selectedGame.releaseYear}
-                </span>
-              )}
-              {tier && (
-                <span className="text-xs text-zinc-500">
-                  {TIER_LABEL[tier]}
-                </span>
-              )}
+              {selectedGame.releaseYear && <span className="text-xs text-zinc-500">{selectedGame.releaseYear}</span>}
+              {tier && <span className="text-xs text-zinc-500">{TIER_LABEL[tier]}</span>}
             </div>
           </div>
         )}
@@ -248,8 +221,7 @@ export default function AddFlow() {
         </div>
       )}
 
-      {(phase === "submitting" ||
-        (phase === "comparing" && !comparison.currentCandidate)) && (
+      {(phase === "submitting" || (phase === "comparing" && !comparison.currentCandidate)) && (
         <div className="flex items-center gap-2 py-4 text-sm text-zinc-500">
           <span
             aria-hidden

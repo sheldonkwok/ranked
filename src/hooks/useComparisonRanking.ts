@@ -33,13 +33,10 @@ export type ComparisonAction =
  * [hi, n) loses to the new game; the new game belongs at index `lo` once
  * `lo >= hi`.
  */
-export function createInitialState(
-  candidates: ComparisonCandidate[] | null
-): ComparisonState {
+export function createInitialState(candidates: ComparisonCandidate[] | null): ComparisonState {
   const list = candidates ?? [];
   return {
-    status:
-      candidates === null ? "idle" : list.length === 0 ? "done" : "comparing",
+    status: candidates === null ? "idle" : list.length === 0 ? "done" : "comparing",
     candidates: list,
     lo: 0,
     hi: list.length,
@@ -47,10 +44,7 @@ export function createInitialState(
   };
 }
 
-export function comparisonReducer(
-  state: ComparisonState,
-  action: ComparisonAction
-): ComparisonState {
+export function comparisonReducer(state: ComparisonState, action: ComparisonAction): ComparisonState {
   switch (action.type) {
     case "init":
       return createInitialState(action.candidates);
@@ -101,14 +95,8 @@ export type UseComparisonRankingResult = {
  * item. Re-initializes whenever the `candidates` reference/identity changes
  * (pass a new array, e.g. from a fresh fetch, to start a new round).
  */
-export function useComparisonRanking(
-  candidates: ComparisonCandidate[] | null
-): UseComparisonRankingResult {
-  const [state, dispatch] = useReducer(
-    comparisonReducer,
-    candidates,
-    createInitialState
-  );
+export function useComparisonRanking(candidates: ComparisonCandidate[] | null): UseComparisonRankingResult {
+  const [state, dispatch] = useReducer(comparisonReducer, candidates, createInitialState);
 
   // Re-sync whenever the caller hands us a new `candidates` array
   // reference (e.g. after fetching a different tier), following React's
@@ -125,9 +113,7 @@ export function useComparisonRanking(
   const maxComparisons = n === 0 ? 0 : Math.ceil(Math.log2(n + 1));
 
   const currentCandidate =
-    state.status === "comparing"
-      ? state.candidates[Math.floor((state.lo + state.hi) / 2)]
-      : null;
+    state.status === "comparing" ? state.candidates[Math.floor((state.lo + state.hi) / 2)] : null;
 
   function choose(newGameWins: boolean) {
     dispatch({ type: "choose", newGameWins });

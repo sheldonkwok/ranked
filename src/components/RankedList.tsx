@@ -11,11 +11,7 @@ export default function RankedList({ entries }: { entries: RankedEntry[] }) {
           rank={index + 1}
           name={entry.game.name}
           coverImageId={entry.game.coverImageId}
-          releaseYear={
-            entry.game.firstReleaseDate
-              ? entry.game.firstReleaseDate.getFullYear()
-              : null
-          }
+          releaseYear={entry.game.firstReleaseDate ? entry.game.firstReleaseDate.getFullYear() : null}
           score={entry.score}
           tier={entry.tier}
         />

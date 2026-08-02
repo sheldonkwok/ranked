@@ -38,12 +38,7 @@ export async function GET(request: NextRequest) {
       excludeEntryId = Number(excludeParam);
     }
 
-    const tierEntries = await getTierEntries(
-      db,
-      user.id,
-      tierParam,
-      excludeEntryId
-    );
+    const tierEntries = await getTierEntries(db, user.id, tierParam, excludeEntryId);
     return NextResponse.json({ entries: serializeEntries(tierEntries) });
   });
 }
@@ -67,11 +62,7 @@ function parseCreateBody(body: unknown): CreateEntryBody {
   if (typeof tier !== "string" || !isTier(tier)) {
     throw badRequest(`invalid tier "${String(tier)}"`);
   }
-  if (
-    typeof position !== "number" ||
-    !Number.isInteger(position) ||
-    position < 0
-  ) {
+  if (typeof position !== "number" || !Number.isInteger(position) || position < 0) {
     throw badRequest("position must be a non-negative integer");
   }
 
@@ -147,9 +138,6 @@ export async function POST(request: NextRequest) {
     }
 
     const ranked = await getRankedEntries(db, user.id);
-    return NextResponse.json(
-      { entries: serializeEntries(ranked) },
-      { status: 201 }
-    );
+    return NextResponse.json({ entries: serializeEntries(ranked) }, { status: 201 });
   });
 }

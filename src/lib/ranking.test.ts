@@ -31,11 +31,7 @@ async function seedGames(names: string[]) {
 
 /** Reads a tier back in position order, straight from the table. */
 async function tierRows(tier: schema.Tier) {
-  return db
-    .select()
-    .from(schema.entries)
-    .where(eq(schema.entries.tier, tier))
-    .orderBy(asc(schema.entries.position));
+  return db.select().from(schema.entries).where(eq(schema.entries.tier, tier)).orderBy(asc(schema.entries.position));
 }
 
 beforeEach(async () => {
@@ -135,14 +131,9 @@ describe("insertEntry", () => {
   it("returns the new entry's id", async () => {
     const [game] = await seedGames(["A"]);
 
-    const id = await db.transaction((tx) =>
-      insertEntry(tx, USER_ID, game.id, "disliked", 0)
-    );
+    const id = await db.transaction((tx) => insertEntry(tx, USER_ID, game.id, "disliked", 0));
 
-    const [row] = await db
-      .select()
-      .from(schema.entries)
-      .where(eq(schema.entries.id, id));
+    const [row] = await db.select().from(schema.entries).where(eq(schema.entries.id, id));
     expect(row.gameId).toBe(game.id);
   });
 });
@@ -170,16 +161,9 @@ describe("moveEntry", () => {
     await db.transaction((tx) => moveEntry(tx, USER_ID, entryA.id, "liked", 0));
 
     const rows = await tierRows("liked");
-    expect(rows.map((r) => r.gameId)).toEqual([
-      gamesList[0].id,
-      gamesList[3].id,
-      gamesList[2].id,
-      gamesList[1].id,
-    ]);
+    expect(rows.map((r) => r.gameId)).toEqual([gamesList[0].id, gamesList[3].id, gamesList[2].id, gamesList[1].id]);
     expect(rows.map((r) => r.position)).toEqual([0, 1, 2, 3]);
-    expect(rows.map((r) => Number(r.score))).toEqual(
-      [0, 1, 2, 3].map((i) => computeScore(i, 4, "liked"))
-    );
+    expect(rows.map((r) => Number(r.score))).toEqual([0, 1, 2, 3].map((i) => computeScore(i, 4, "liked")));
   });
 
   it("moves an entry up within the same tier", async () => {
@@ -192,12 +176,7 @@ describe("moveEntry", () => {
     await db.transaction((tx) => moveEntry(tx, USER_ID, entryD.id, "liked", 2));
 
     const rows = await tierRows("liked");
-    expect(rows.map((r) => r.gameId)).toEqual([
-      gamesList[2].id,
-      gamesList[1].id,
-      gamesList[3].id,
-      gamesList[0].id,
-    ]);
+    expect(rows.map((r) => r.gameId)).toEqual([gamesList[2].id, gamesList[1].id, gamesList[3].id, gamesList[0].id]);
     expect(rows.map((r) => r.position)).toEqual([0, 1, 2, 3]);
   });
 
@@ -218,10 +197,7 @@ describe("moveEntry", () => {
 
     expect(likedRows.map((r) => r.gameId)).toEqual([g1.id, g3.id]);
     expect(likedRows.map((r) => r.position)).toEqual([0, 1]);
-    expect(likedRows.map((r) => Number(r.score))).toEqual([
-      computeScore(0, 2, "liked"),
-      computeScore(1, 2, "liked"),
-    ]);
+    expect(likedRows.map((r) => Number(r.score))).toEqual([computeScore(0, 2, "liked"), computeScore(1, 2, "liked")]);
 
     expect(fineRows.map((r) => r.gameId)).toEqual([g2.id]);
     expect(fineRows.map((r) => r.position)).toEqual([0]);
@@ -230,13 +206,9 @@ describe("moveEntry", () => {
 
   it("throws when the entry does not belong to the requesting user", async () => {
     const [game] = await seedGames(["A"]);
-    const entryId = await db.transaction((tx) =>
-      insertEntry(tx, USER_ID, game.id, "liked", 0)
-    );
+    const entryId = await db.transaction((tx) => insertEntry(tx, USER_ID, game.id, "liked", 0));
 
-    await expect(
-      db.transaction((tx) => moveEntry(tx, "someone-else", entryId, "liked", 0))
-    ).rejects.toThrow();
+    await expect(db.transaction((tx) => moveEntry(tx, "someone-else", entryId, "liked", 0))).rejects.toThrow();
   });
 });
 
@@ -254,22 +226,14 @@ describe("removeEntry", () => {
     await db.transaction((tx) => removeEntry(tx, USER_ID, ids[1]));
 
     const rows = await tierRows("liked");
-    expect(rows.map((r) => r.gameId)).toEqual([
-      gamesList[0].id,
-      gamesList[2].id,
-    ]);
+    expect(rows.map((r) => r.gameId)).toEqual([gamesList[0].id, gamesList[2].id]);
     expect(rows.map((r) => r.position)).toEqual([0, 1]);
-    expect(rows.map((r) => Number(r.score))).toEqual([
-      computeScore(0, 2, "liked"),
-      computeScore(1, 2, "liked"),
-    ]);
+    expect(rows.map((r) => Number(r.score))).toEqual([computeScore(0, 2, "liked"), computeScore(1, 2, "liked")]);
   });
 
   it("leaves an empty tier after removing the last entry", async () => {
     const [game] = await seedGames(["A"]);
-    const entryId = await db.transaction((tx) =>
-      insertEntry(tx, USER_ID, game.id, "disliked", 0)
-    );
+    const entryId = await db.transaction((tx) => insertEntry(tx, USER_ID, game.id, "disliked", 0));
 
     await db.transaction((tx) => removeEntry(tx, USER_ID, entryId));
 
@@ -279,24 +243,15 @@ describe("removeEntry", () => {
 
   it("throws when the entry does not belong to the requesting user", async () => {
     const [game] = await seedGames(["A"]);
-    const entryId = await db.transaction((tx) =>
-      insertEntry(tx, USER_ID, game.id, "liked", 0)
-    );
+    const entryId = await db.transaction((tx) => insertEntry(tx, USER_ID, game.id, "liked", 0));
 
-    await expect(
-      db.transaction((tx) => removeEntry(tx, "someone-else", entryId))
-    ).rejects.toThrow();
+    await expect(db.transaction((tx) => removeEntry(tx, "someone-else", entryId))).rejects.toThrow();
   });
 });
 
 describe("getRankedEntries", () => {
   it("orders globally by tier (liked, fine, disliked) then by position", async () => {
-    const [liked1, liked2, fine1, disliked1] = await seedGames([
-      "Liked1",
-      "Liked2",
-      "Fine1",
-      "Disliked1",
-    ]);
+    const [liked1, liked2, fine1, disliked1] = await seedGames(["Liked1", "Liked2", "Fine1", "Disliked1"]);
 
     await db.transaction(async (tx) => {
       // Insert out of tier order to prove sorting isn't insertion-order dependent.
@@ -308,19 +263,9 @@ describe("getRankedEntries", () => {
 
     const ranked = await getRankedEntries(db, USER_ID);
 
-    expect(ranked.map((r) => r.game.name)).toEqual([
-      "Liked1",
-      "Liked2",
-      "Fine1",
-      "Disliked1",
-    ]);
+    expect(ranked.map((r) => r.game.name)).toEqual(["Liked1", "Liked2", "Fine1", "Disliked1"]);
     expect(ranked.every((r) => typeof r.score === "number")).toBe(true);
-    expect(ranked.map((r) => r.tier)).toEqual([
-      "liked",
-      "liked",
-      "fine",
-      "disliked",
-    ]);
+    expect(ranked.map((r) => r.tier)).toEqual(["liked", "liked", "fine", "disliked"]);
   });
 });
 

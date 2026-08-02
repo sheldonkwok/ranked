@@ -13,20 +13,10 @@ export type EntryRowProps = {
   tier: Tier;
 };
 
-export default function EntryRow({
-  id,
-  rank,
-  name,
-  coverImageId,
-  releaseYear,
-  score,
-  tier,
-}: EntryRowProps) {
+export default function EntryRow({ id, rank, name, coverImageId, releaseYear, score, tier }: EntryRowProps) {
   return (
     <li className="flex items-center gap-4 py-3">
-      <span className="w-6 shrink-0 text-right text-sm tabular-nums text-zinc-500 dark:text-zinc-400">
-        {rank}
-      </span>
+      <span className="w-6 shrink-0 text-right text-sm tabular-nums text-zinc-500 dark:text-zinc-400">{rank}</span>
 
       <CoverImage
         coverImageId={coverImageId}
@@ -38,20 +28,12 @@ export default function EntryRow({
 
       <div className="min-w-0 flex-1">
         <p className="truncate font-medium">{name}</p>
-        {releaseYear !== null && (
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">
-            {releaseYear}
-          </p>
-        )}
+        {releaseYear !== null && <p className="text-sm text-zinc-500 dark:text-zinc-400">{releaseYear}</p>}
       </div>
 
       <ScoreBadge score={score} tier={tier} />
 
-      <EntryActions
-        entryId={id}
-        game={{ name, coverImageId, releaseYear }}
-        tier={tier}
-      />
+      <EntryActions entryId={id} game={{ name, coverImageId, releaseYear }} tier={tier} />
     </li>
   );
 }

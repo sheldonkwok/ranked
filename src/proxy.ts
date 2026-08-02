@@ -15,8 +15,7 @@ const SESSION_COOKIE_NAME = "session";
 
 // Keep in sync with AUTH_DISABLED in src/lib/session.ts. Duplicated for the
 // same reason as SESSION_COOKIE_NAME above — see that comment.
-const AUTH_DISABLED =
-  process.env.NODE_ENV !== "production" && process.env.DISABLE_AUTH === "true";
+const AUTH_DISABLED = process.env.NODE_ENV !== "production" && process.env.DISABLE_AUTH === "true";
 
 /**
  * Optimistic auth gate: redirects to /sign-in whenever the `session` cookie

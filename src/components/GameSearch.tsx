@@ -22,11 +22,7 @@ type SearchState =
 const MIN_QUERY_LENGTH = 2;
 const DEBOUNCE_MS = 300;
 
-export default function GameSearch({
-  onSelectAction,
-}: {
-  onSelectAction: (game: GameSearchResult) => void;
-}) {
+export default function GameSearch({ onSelectAction }: { onSelectAction: (game: GameSearchResult) => void }) {
   const [query, setQuery] = useState("");
   const [state, setState] = useState<SearchState>({ kind: "idle" });
   const requestIdRef = useRef(0);
@@ -39,17 +35,14 @@ export default function GameSearch({
     setState({ kind: "loading" });
 
     try {
-      const res = await fetch(
-        `/api/games/search?q=${encodeURIComponent(trimmed)}`
-      );
+      const res = await fetch(`/api/games/search?q=${encodeURIComponent(trimmed)}`);
 
       if (requestId !== requestIdRef.current) return;
 
       if (res.status === 502) {
         setState({
           kind: "error",
-          message:
-            "Game search is unavailable (IGDB credentials not configured).",
+          message: "Game search is unavailable (IGDB credentials not configured).",
         });
         return;
       }
@@ -123,15 +116,11 @@ export default function GameSearch({
           autoFocus
           className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-500"
         />
-        <p className="text-xs text-zinc-500">
-          Results appear as you type — press Enter to search now.
-        </p>
+        <p className="text-xs text-zinc-500">Results appear as you type — press Enter to search now.</p>
       </form>
 
       {trimmedQuery.length > 0 && trimmedQuery.length < MIN_QUERY_LENGTH && (
-        <p className="text-sm text-zinc-500">
-          Keep typing ({MIN_QUERY_LENGTH}+ characters)…
-        </p>
+        <p className="text-sm text-zinc-500">Keep typing ({MIN_QUERY_LENGTH}+ characters)…</p>
       )}
 
       {/* Once the query drops below the minimum length, the effect stops
@@ -153,51 +142,39 @@ export default function GameSearch({
         </p>
       )}
 
-      {trimmedQuery.length >= MIN_QUERY_LENGTH &&
-        state.kind === "results" &&
-        state.results.length === 0 && (
-          <p className="text-sm text-zinc-500">
-            No games found for &quot;{trimmedQuery}&quot;.
-          </p>
-        )}
+      {trimmedQuery.length >= MIN_QUERY_LENGTH && state.kind === "results" && state.results.length === 0 && (
+        <p className="text-sm text-zinc-500">No games found for &quot;{trimmedQuery}&quot;.</p>
+      )}
 
-      {trimmedQuery.length >= MIN_QUERY_LENGTH &&
-        state.kind === "results" &&
-        state.results.length > 0 && (
-          <ul className="flex flex-col divide-y divide-zinc-200 dark:divide-zinc-800">
-            {state.results.map((game) => (
-              <li key={game.igdbId}>
-                <button
-                  type="button"
-                  onClick={() => onSelectAction(game)}
-                  className="flex w-full items-center gap-3 py-3 text-left hover:bg-zinc-50 dark:hover:bg-zinc-900"
-                >
-                  <CoverImage
-                    coverImageId={game.coverImageId}
-                    size="cover_small"
-                    className="h-16 w-12 shrink-0 rounded"
-                  />
+      {trimmedQuery.length >= MIN_QUERY_LENGTH && state.kind === "results" && state.results.length > 0 && (
+        <ul className="flex flex-col divide-y divide-zinc-200 dark:divide-zinc-800">
+          {state.results.map((game) => (
+            <li key={game.igdbId}>
+              <button
+                type="button"
+                onClick={() => onSelectAction(game)}
+                className="flex w-full items-center gap-3 py-3 text-left hover:bg-zinc-50 dark:hover:bg-zinc-900"
+              >
+                <CoverImage
+                  coverImageId={game.coverImageId}
+                  size="cover_small"
+                  className="h-16 w-12 shrink-0 rounded"
+                />
 
-                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                    <div className="flex items-center gap-2">
-                      <span className="truncate text-sm font-medium">
-                        {game.name}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-zinc-500">
-                      {game.releaseYear && <span>{game.releaseYear}</span>}
-                      {game.platforms.length > 0 && (
-                        <span className="truncate">
-                          {game.platforms.join(", ")}
-                        </span>
-                      )}
-                    </div>
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className="truncate text-sm font-medium">{game.name}</span>
                   </div>
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
+                  <div className="flex items-center gap-2 text-xs text-zinc-500">
+                    {game.releaseYear && <span>{game.releaseYear}</span>}
+                    {game.platforms.length > 0 && <span className="truncate">{game.platforms.join(", ")}</span>}
+                  </div>
+                </div>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

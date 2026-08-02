@@ -65,11 +65,7 @@ export const entries = pgTable(
   },
   (table) => [
     uniqueIndex("entries_user_game_unique").on(table.userId, table.gameId),
-    index("entries_user_tier_position_idx").on(
-      table.userId,
-      table.tier,
-      table.position
-    ),
+    index("entries_user_tier_position_idx").on(table.userId, table.tier, table.position),
   ]
 );
 

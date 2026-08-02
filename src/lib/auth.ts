@@ -52,9 +52,7 @@ export type TwitchHelixUser = {
  * Helix requires both the bearer token *and* the app's Client-Id header —
  * the access token alone isn't enough to identify which app is calling.
  */
-export async function fetchTwitchUser(
-  accessToken: string
-): Promise<TwitchHelixUser> {
+export async function fetchTwitchUser(accessToken: string): Promise<TwitchHelixUser> {
   const clientId = process.env.TWITCH_CLIENT_ID;
   if (!clientId) {
     throw new Error("Missing TWITCH_CLIENT_ID environment variable");
@@ -70,9 +68,7 @@ export async function fetchTwitchUser(
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(
-      `Twitch Helix /users request failed (status ${res.status}): ${text}`
-    );
+    throw new Error(`Twitch Helix /users request failed (status ${res.status}): ${text}`);
   }
 
   const body = (await res.json()) as { data: TwitchHelixUser[] };

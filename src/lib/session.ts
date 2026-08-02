@@ -24,8 +24,7 @@ const SESSION_RENEWAL_THRESHOLD_MS = 1000 * 60 * 60 * 24 * 15; // 15 days
  * (not just convention), so DISABLE_AUTH is inert even if it's accidentally
  * set in a prod environment. See DISABLE_AUTH in .env.example.
  */
-const AUTH_DISABLED =
-  process.env.NODE_ENV !== "production" && process.env.DISABLE_AUTH === "true";
+const AUTH_DISABLED = process.env.NODE_ENV !== "production" && process.env.DISABLE_AUTH === "true";
 const DEV_USER_TWITCH_ID = "dev-user";
 
 /**
@@ -74,18 +73,13 @@ export function hashToken(token: string): string {
  * Creates a new session for `userId`, valid for 30 days from now.
  * Returns both the raw token (to set as a cookie) and the DB row.
  */
-export async function createSession(
-  userId: string
-): Promise<{ token: string; session: Session }> {
+export async function createSession(userId: string): Promise<{ token: string; session: Session }> {
   const token = generateSessionToken();
   const sessionId = hashToken(token);
   const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
 
   const db = await getDb();
-  const [session] = await db
-    .insert(sessions)
-    .values({ id: sessionId, userId, expiresAt })
-    .returning();
+  const [session] = await db.insert(sessions).values({ id: sessionId, userId, expiresAt }).returning();
 
   return { token, session };
 }
@@ -102,9 +96,7 @@ export async function createSession(
  * server functions) should refresh the cookie's expiry themselves when the
  * returned session's `expiresAt` differs from what's currently set.
  */
-export async function validateSessionToken(
-  token: string
-): Promise<{ user: User; session: Session } | null> {
+export async function validateSessionToken(token: string): Promise<{ user: User; session: Session } | null> {
   const sessionId = hashToken(token);
   const db = await getDb();
 
@@ -127,10 +119,7 @@ export async function validateSessionToken(
 
   if (now >= session.expiresAt.getTime() - SESSION_RENEWAL_THRESHOLD_MS) {
     session.expiresAt = new Date(now + SESSION_DURATION_MS);
-    await db
-      .update(sessions)
-      .set({ expiresAt: session.expiresAt })
-      .where(eq(sessions.id, sessionId));
+    await db.update(sessions).set({ expiresAt: session.expiresAt }).where(eq(sessions.id, sessionId));
   }
 
   return { user, session };
@@ -147,10 +136,7 @@ export async function invalidateSession(sessionId: string): Promise<void> {
  * `expires` mirroring the DB row's `expiresAt` so the client-side cookie
  * lifetime always matches server-side session validity.
  */
-export async function setSessionCookie(
-  token: string,
-  expiresAt: Date
-): Promise<void> {
+export async function setSessionCookie(token: string, expiresAt: Date): Promise<void> {
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE_NAME, token, {
     httpOnly: true,

@@ -23,9 +23,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
       <div className="flex w-full max-w-sm flex-col items-center gap-6 rounded-xl border border-zinc-200 px-8 py-10 text-center dark:border-zinc-800">
         <div className="flex flex-col items-center gap-1">
           <h1 className="text-2xl font-semibold">Ranked</h1>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            Rank every game you&apos;ve played
-          </p>
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">Rank every game you&apos;ve played</p>
         </div>
 
         {error && (

@@ -40,11 +40,7 @@ export default function CoverImage({
           />
         ) : (
           // biome-ignore lint/performance/noImgElement: external IGDB CDN image, dimensions vary
-          <img
-            src={coverUrl(coverImageId, size)}
-            alt={alt}
-            className="h-full w-full object-cover"
-          />
+          <img src={coverUrl(coverImageId, size)} alt={alt} className="h-full w-full object-cover" />
         )
       ) : (
         <div

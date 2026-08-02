@@ -1,10 +1,6 @@
 import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
-import {
-  badRequest,
-  releaseYearOf,
-  withErrorHandling,
-} from "@/app/api/_lib/handler";
+import { badRequest, releaseYearOf, withErrorHandling } from "@/app/api/_lib/handler";
 import { entries, games, getDb } from "@/db";
 import { type IgdbGame, searchGames } from "@/lib/igdb";
 import { requireUser } from "@/lib/session";
@@ -42,9 +38,7 @@ export async function GET(request: NextRequest) {
         .slice(0, SEARCH_RESULT_LIMIT)
         .map((game) => ({
           ...game,
-          firstReleaseDate: game.firstReleaseDate
-            ? game.firstReleaseDate.toISOString()
-            : null,
+          firstReleaseDate: game.firstReleaseDate ? game.firstReleaseDate.toISOString() : null,
           releaseYear: releaseYearOf(game.firstReleaseDate),
         })),
     });

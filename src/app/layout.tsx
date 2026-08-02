@@ -36,10 +36,7 @@ export default async function RootLayout({
   const user = await getCurrentUser();
 
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-    >
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
       <body className="min-h-screen font-sans">
         <header className="border-b">
           <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">

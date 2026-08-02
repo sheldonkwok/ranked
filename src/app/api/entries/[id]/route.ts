@@ -6,10 +6,7 @@ import { getDb } from "@/db";
 import { getRankedEntries, removeEntry } from "@/lib/ranking";
 import { requireUser } from "@/lib/session";
 
-export async function DELETE(
-  _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   return withErrorHandling(async () => {
     const user = await requireUser();
     const { id } = await params;

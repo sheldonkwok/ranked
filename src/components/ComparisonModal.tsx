@@ -8,29 +8,17 @@ type ComparisonGame = {
   releaseYear: number | null;
 };
 
-function CoverCard({
-  game,
-  onClick,
-}: {
-  game: ComparisonGame;
-  onClick: () => void;
-}) {
+function CoverCard({ game, onClick }: { game: ComparisonGame; onClick: () => void }) {
   return (
     <button
       type="button"
       onClick={onClick}
       className="flex flex-1 flex-col items-center gap-3 rounded-lg border border-zinc-200 p-4 text-center transition-colors hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:border-zinc-600 dark:hover:bg-zinc-900"
     >
-      <CoverImage
-        coverImageId={game.coverImageId}
-        size="cover_big"
-        className="aspect-[3/4] w-full max-w-40 rounded"
-      />
+      <CoverImage coverImageId={game.coverImageId} size="cover_big" className="aspect-[3/4] w-full max-w-40 rounded" />
       <div className="flex flex-col gap-0.5">
         <span className="text-sm font-medium">{game.name}</span>
-        {game.releaseYear && (
-          <span className="text-xs text-zinc-500">{game.releaseYear}</span>
-        )}
+        {game.releaseYear && <span className="text-xs text-zinc-500">{game.releaseYear}</span>}
       </div>
     </button>
   );
@@ -63,9 +51,7 @@ export default function ComparisonModal({
 
         <div className="flex items-stretch gap-4">
           <CoverCard game={newGame} onClick={() => onChooseAction(true)} />
-          <div className="flex items-center text-xs font-medium text-zinc-400">
-            vs
-          </div>
+          <div className="flex items-center text-xs font-medium text-zinc-400">vs</div>
           <CoverCard game={candidate} onClick={() => onChooseAction(false)} />
         </div>
 

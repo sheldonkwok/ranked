@@ -7,15 +7,7 @@ import type { Tier } from "@/db/schema";
 
 type Mode = "idle" | "confirm-remove" | "removing" | "rerank";
 
-export default function EntryActions({
-  entryId,
-  game,
-  tier,
-}: {
-  entryId: number;
-  game: RerankGame;
-  tier: Tier;
-}) {
+export default function EntryActions({ entryId, game, tier }: { entryId: number; game: RerankGame; tier: Tier }) {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("idle");
   const [removeError, setRemoveError] = useState<string | null>(null);
@@ -82,23 +74,14 @@ export default function EntryActions({
           >
             No
           </button>
-          {removeError && (
-            <span className="text-red-600 dark:text-red-400">
-              {removeError}
-            </span>
-          )}
+          {removeError && <span className="text-red-600 dark:text-red-400">{removeError}</span>}
         </>
       )}
 
       {mode === "removing" && <span className="text-zinc-400">Removing…</span>}
 
       {mode === "rerank" && (
-        <RerankDialog
-          entryId={entryId}
-          game={game}
-          currentTier={tier}
-          onCloseAction={() => setMode("idle")}
-        />
+        <RerankDialog entryId={entryId} game={game} currentTier={tier} onCloseAction={() => setMode("idle")} />
       )}
     </div>
   );
