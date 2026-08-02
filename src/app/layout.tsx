@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Press_Start_2P, Silkscreen } from "next/font/google";
+import { Press_Start_2P, VT323 } from "next/font/google";
 import Image from "next/image";
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/session";
@@ -11,9 +11,9 @@ const pressStart2p = Press_Start_2P({
   subsets: ["latin"],
 });
 
-const silkscreen = Silkscreen({
-  variable: "--font-silkscreen",
-  weight: ["400", "700"],
+const vt323 = VT323({
+  variable: "--font-vt323",
+  weight: "400",
   subsets: ["latin"],
 });
 
@@ -38,7 +38,7 @@ export default async function RootLayout({
   const user = await getCurrentUser();
 
   return (
-    <html lang="en" className={`${pressStart2p.variable} ${silkscreen.variable} antialiased`}>
+    <html lang="en" className={`${pressStart2p.variable} ${vt323.variable} antialiased`}>
       <body className="min-h-screen font-sans">
         {/* Fixed pixel-art backdrop + legibility scrims, behind all content. */}
         <div

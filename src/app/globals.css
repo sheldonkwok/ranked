@@ -4,7 +4,7 @@
    The app is dark-only by design; there is no light-mode variant. */
 @theme inline {
   --font-pixel: var(--font-press-start-2p);
-  --font-sans: var(--font-silkscreen);
+  --font-sans: var(--font-vt323);
 
   --color-bg: #05070f;
   --color-panel: #040812;
