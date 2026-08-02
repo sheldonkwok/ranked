@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 
 // Next.js 16 renamed the `middleware.ts` file convention to `proxy.ts`
 // (functionality is unchanged, see node_modules/next/dist/docs/01-app/

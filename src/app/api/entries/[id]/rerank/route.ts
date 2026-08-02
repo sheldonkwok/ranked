@@ -1,15 +1,18 @@
-import { NextResponse, type NextRequest } from "next/server";
-import { getDb, type Tier } from "@/db";
-import { requireUser } from "@/lib/session";
-import { getRankedEntries, moveEntry } from "@/lib/ranking";
-import { badRequest, withErrorHandling } from "@/app/api/_lib/handler";
+import { type NextRequest, NextResponse } from "next/server";
 import { serializeEntries } from "@/app/api/_lib/entries";
 import { isEntryNotFoundError, parseEntryId } from "@/app/api/_lib/entry-id";
+import { badRequest, withErrorHandling } from "@/app/api/_lib/handler";
+import { getDb, type Tier } from "@/db";
+import { getRankedEntries, moveEntry } from "@/lib/ranking";
+import { requireUser } from "@/lib/session";
 
 const VALID_TIERS: readonly Tier[] = ["liked", "fine", "disliked"];
 
 function isTier(value: unknown): value is Tier {
-  return typeof value === "string" && (VALID_TIERS as readonly string[]).includes(value);
+  return (
+    typeof value === "string" &&
+    (VALID_TIERS as readonly string[]).includes(value)
+  );
 }
 
 type RerankBody = {
@@ -27,7 +30,11 @@ function parseRerankBody(body: unknown): RerankBody {
   if (!isTier(tier)) {
     throw badRequest(`invalid tier "${String(tier)}"`);
   }
-  if (typeof position !== "number" || !Number.isInteger(position) || position < 0) {
+  if (
+    typeof position !== "number" ||
+    !Number.isInteger(position) ||
+    position < 0
+  ) {
     throw badRequest("position must be a non-negative integer");
   }
 
@@ -54,7 +61,9 @@ export async function PATCH(
     const db = await getDb();
 
     try {
-      await db.transaction((tx) => moveEntry(tx, user.id, entryId, tier, position));
+      await db.transaction((tx) =>
+        moveEntry(tx, user.id, entryId, tier, position)
+      );
     } catch (err) {
       if (isEntryNotFoundError(err)) {
         return NextResponse.json({ error: "entry_not_found" }, { status: 404 });

@@ -1,14 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import TierPicker from "@/components/TierPicker";
+import { useEffect, useRef, useState } from "react";
 import ComparisonModal from "@/components/ComparisonModal";
-import {
-  useComparisonRanking,
-  type ComparisonCandidate,
-} from "@/hooks/useComparisonRanking";
+import TierPicker from "@/components/TierPicker";
 import type { Tier } from "@/db/schema";
+import {
+  type ComparisonCandidate,
+  useComparisonRanking,
+} from "@/hooks/useComparisonRanking";
 
 type Phase =
   | "tier"
@@ -165,9 +165,7 @@ export default function RerankDialog({
         onClick={onCloseAction}
         disabled={phase === "submitting"}
         aria-label="Cancel re-rank"
-        title={
-          phase === "submitting" ? "Saving…" : "Cancel re-rank"
-        }
+        title={phase === "submitting" ? "Saving…" : "Cancel re-rank"}
         className="fixed top-4 right-4 z-[60] rounded-full bg-white px-2.5 py-1 text-sm font-medium text-zinc-500 shadow-md hover:text-zinc-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
       >
         ✕
@@ -209,8 +207,7 @@ export default function RerankDialog({
                   aria-hidden
                   className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-600 dark:border-zinc-700 dark:border-t-zinc-300"
                 />
-                Loading your {tier ? TIER_LABEL[tier].toLowerCase() : ""}{" "}
-                games…
+                Loading your {tier ? TIER_LABEL[tier].toLowerCase() : ""} games…
               </div>
             )}
 

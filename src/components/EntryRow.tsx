@@ -1,7 +1,7 @@
-import type { Tier } from "@/db/schema";
-import ScoreBadge from "@/components/ScoreBadge";
-import EntryActions from "@/components/EntryActions";
 import CoverImage from "@/components/CoverImage";
+import EntryActions from "@/components/EntryActions";
+import ScoreBadge from "@/components/ScoreBadge";
+import type { Tier } from "@/db/schema";
 
 export type EntryRowProps = {
   id: number;
@@ -39,7 +39,9 @@ export default function EntryRow({
       <div className="min-w-0 flex-1">
         <p className="truncate font-medium">{name}</p>
         {releaseYear !== null && (
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">{releaseYear}</p>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            {releaseYear}
+          </p>
         )}
       </div>
 

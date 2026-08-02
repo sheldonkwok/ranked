@@ -1,16 +1,16 @@
+import { relations } from "drizzle-orm";
 import {
-  pgTable,
-  pgEnum,
-  text,
+  index,
   integer,
-  serial,
-  timestamp,
   jsonb,
   numeric,
+  pgEnum,
+  pgTable,
+  serial,
+  text,
+  timestamp,
   uniqueIndex,
-  index,
 } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
 
 export const tierEnum = pgEnum("tier", ["liked", "fine", "disliked"]);
 

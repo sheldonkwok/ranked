@@ -1,6 +1,6 @@
 import { and, eq, gt, gte, ne, sql } from "drizzle-orm";
 import type { Db, Tx } from "@/db";
-import { entries, games, type Entry, type Game, type Tier } from "@/db/schema";
+import { type Entry, entries, type Game, games, type Tier } from "@/db/schema";
 
 /**
  * Read-only query functions accept either a plain `Db` handle (e.g. from
@@ -121,7 +121,11 @@ export async function getTierEntries(
   return rows.map(toRankedEntry);
 }
 
-async function countTierEntries(tx: Tx, userId: string, tier: Tier): Promise<number> {
+async function countTierEntries(
+  tx: Tx,
+  userId: string,
+  tier: Tier
+): Promise<number> {
   const [row] = await tx
     .select({ count: sql<number>`count(*)::int` })
     .from(entries)
@@ -172,7 +176,11 @@ export async function insertEntry(
   return inserted.id;
 }
 
-async function loadOwnedEntry(tx: Tx, userId: string, entryId: number): Promise<Entry> {
+async function loadOwnedEntry(
+  tx: Tx,
+  userId: string,
+  entryId: number
+): Promise<Entry> {
   const [entry] = await tx
     .select()
     .from(entries)
@@ -258,7 +266,11 @@ export async function moveEntry(
  * Deletes an entry, closes the gap it left in its tier, and recomputes
  * that tier's scores.
  */
-export async function removeEntry(tx: Tx, userId: string, entryId: number): Promise<void> {
+export async function removeEntry(
+  tx: Tx,
+  userId: string,
+  entryId: number
+): Promise<void> {
   const entry = await loadOwnedEntry(tx, userId, entryId);
 
   await tx.delete(entries).where(eq(entries.id, entryId));
@@ -282,7 +294,11 @@ export async function removeEntry(tx: Tx, userId: string, entryId: number): Prom
  * (defensively) normalizes positions to a dense 0..n-1 range in the
  * process.
  */
-export async function recomputeTierScores(tx: Tx, userId: string, tier: Tier): Promise<void> {
+export async function recomputeTierScores(
+  tx: Tx,
+  userId: string,
+  tier: Tier
+): Promise<void> {
   const rows = await tx
     .select({ id: entries.id })
     .from(entries)

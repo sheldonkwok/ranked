@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getDb } from "@/db";
-import { getCurrentUser } from "@/lib/session";
-import { getRankedEntries } from "@/lib/ranking";
 import RankedList from "@/components/RankedList";
+import { getDb } from "@/db";
+import { getRankedEntries } from "@/lib/ranking";
+import { getCurrentUser } from "@/lib/session";
 
 export default async function Home() {
   const user = await getCurrentUser();

@@ -38,7 +38,8 @@ export function createInitialState(
 ): ComparisonState {
   const list = candidates ?? [];
   return {
-    status: candidates === null ? "idle" : list.length === 0 ? "done" : "comparing",
+    status:
+      candidates === null ? "idle" : list.length === 0 ? "done" : "comparing",
     candidates: list,
     lo: 0,
     hi: list.length,

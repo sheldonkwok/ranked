@@ -1,10 +1,10 @@
-import { NextResponse, type NextRequest } from "next/server";
-import { getDb } from "@/db";
-import { requireUser } from "@/lib/session";
-import { getRankedEntries, removeEntry } from "@/lib/ranking";
-import { withErrorHandling } from "@/app/api/_lib/handler";
+import { type NextRequest, NextResponse } from "next/server";
 import { serializeEntries } from "@/app/api/_lib/entries";
 import { isEntryNotFoundError, parseEntryId } from "@/app/api/_lib/entry-id";
+import { withErrorHandling } from "@/app/api/_lib/handler";
+import { getDb } from "@/db";
+import { getRankedEntries, removeEntry } from "@/lib/ranking";
+import { requireUser } from "@/lib/session";
 
 export async function DELETE(
   _request: NextRequest,

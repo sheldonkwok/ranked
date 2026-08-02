@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
 import Image from "next/image";
 import Link from "next/link";
-import { Geist, Geist_Mono } from "next/font/google";
 import { getCurrentUser } from "@/lib/session";
 import "./globals.css";
 
@@ -52,10 +52,7 @@ export default async function RootLayout({
                   <Link href="/">Home</Link>
                   <Link href="/add">Add</Link>
                 </nav>
-                <Link
-                  href="/settings"
-                  className="flex items-center gap-2"
-                >
+                <Link href="/settings" className="flex items-center gap-2">
                   {user.avatarUrl ? (
                     <Image
                       src={user.avatarUrl}

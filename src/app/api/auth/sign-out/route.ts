@@ -1,6 +1,11 @@
-import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { SESSION_COOKIE_NAME, deleteSessionCookie, hashToken, invalidateSession } from "@/lib/session";
+import { NextResponse } from "next/server";
+import {
+  deleteSessionCookie,
+  hashToken,
+  invalidateSession,
+  SESSION_COOKIE_NAME,
+} from "@/lib/session";
 
 export async function POST(request: Request) {
   const cookieStore = await cookies();
@@ -12,5 +17,7 @@ export async function POST(request: Request) {
 
   await deleteSessionCookie();
 
-  return NextResponse.redirect(new URL("/sign-in", request.url), { status: 303 });
+  return NextResponse.redirect(new URL("/sign-in", request.url), {
+    status: 303,
+  });
 }

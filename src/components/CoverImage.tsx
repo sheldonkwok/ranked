@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { coverUrl, type CoverSize } from "@/lib/cover";
+import { type CoverSize, coverUrl } from "@/lib/cover";
 
 // Shared cover-art renderer used anywhere a game's box art shows up
 // (ranked list rows, search results, tier/comparison cards). Handles the

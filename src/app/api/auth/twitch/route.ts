@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { generateState } from "arctic";
+import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
 import { getTwitchClient } from "@/lib/auth";
 
 // Short-lived, single-use cookie that ties the callback request back to the

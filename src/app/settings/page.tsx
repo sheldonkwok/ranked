@@ -1,8 +1,8 @@
-import Image from "next/image";
 import type { Metadata } from "next";
+import Image from "next/image";
 import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/session";
 import SignOutButton from "@/components/SignOutButton";
+import { getCurrentUser } from "@/lib/session";
 
 export const metadata: Metadata = {
   title: "Settings",

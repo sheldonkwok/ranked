@@ -1,16 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import GameSearch, { type GameSearchResult } from "@/components/GameSearch";
-import TierPicker from "@/components/TierPicker";
+import { useEffect, useRef, useState } from "react";
 import ComparisonModal from "@/components/ComparisonModal";
 import CoverImage from "@/components/CoverImage";
-import {
-  useComparisonRanking,
-  type ComparisonCandidate,
-} from "@/hooks/useComparisonRanking";
+import GameSearch, { type GameSearchResult } from "@/components/GameSearch";
+import TierPicker from "@/components/TierPicker";
 import type { Tier } from "@/db/schema";
+import {
+  type ComparisonCandidate,
+  useComparisonRanking,
+} from "@/hooks/useComparisonRanking";
 
 type Phase =
   | "search"
@@ -170,9 +170,7 @@ export default function AddFlow() {
 
   return (
     <div className="flex flex-col gap-6">
-      {phase === "search" && (
-        <GameSearch onSelectAction={handleSelectGame} />
-      )}
+      {phase === "search" && <GameSearch onSelectAction={handleSelectGame} />}
 
       {(phase === "tier" ||
         phase === "loading-candidates" ||

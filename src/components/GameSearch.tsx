@@ -164,40 +164,40 @@ export default function GameSearch({
       {trimmedQuery.length >= MIN_QUERY_LENGTH &&
         state.kind === "results" &&
         state.results.length > 0 && (
-        <ul className="flex flex-col divide-y divide-zinc-200 dark:divide-zinc-800">
-          {state.results.map((game) => (
-            <li key={game.igdbId}>
-              <button
-                type="button"
-                onClick={() => onSelectAction(game)}
-                className="flex w-full items-center gap-3 py-3 text-left hover:bg-zinc-50 dark:hover:bg-zinc-900"
-              >
-                <CoverImage
-                  coverImageId={game.coverImageId}
-                  size="cover_small"
-                  className="h-16 w-12 shrink-0 rounded"
-                />
+          <ul className="flex flex-col divide-y divide-zinc-200 dark:divide-zinc-800">
+            {state.results.map((game) => (
+              <li key={game.igdbId}>
+                <button
+                  type="button"
+                  onClick={() => onSelectAction(game)}
+                  className="flex w-full items-center gap-3 py-3 text-left hover:bg-zinc-50 dark:hover:bg-zinc-900"
+                >
+                  <CoverImage
+                    coverImageId={game.coverImageId}
+                    size="cover_small"
+                    className="h-16 w-12 shrink-0 rounded"
+                  />
 
-                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <div className="flex items-center gap-2">
-                    <span className="truncate text-sm font-medium">
-                      {game.name}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-zinc-500">
-                    {game.releaseYear && <span>{game.releaseYear}</span>}
-                    {game.platforms.length > 0 && (
-                      <span className="truncate">
-                        {game.platforms.join(", ")}
+                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="truncate text-sm font-medium">
+                        {game.name}
                       </span>
-                    )}
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-zinc-500">
+                      {game.releaseYear && <span>{game.releaseYear}</span>}
+                      {game.platforms.length > 0 && (
+                        <span className="truncate">
+                          {game.platforms.join(", ")}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
     </div>
   );
 }

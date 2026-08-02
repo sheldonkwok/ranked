@@ -1,4 +1,7 @@
-import { drizzle as drizzlePglite, type PgliteDatabase } from "drizzle-orm/pglite";
+import {
+  drizzle as drizzlePglite,
+  type PgliteDatabase,
+} from "drizzle-orm/pglite";
 import { migrate as migratePglite } from "drizzle-orm/pglite/migrator";
 import {
   drizzle as drizzlePostgres,
@@ -19,7 +22,9 @@ export * from "./schema";
  * only use the common Drizzle query builder API (select/insert/update/delete/
  * transaction) work fine against this union.
  */
-export type Db = PgliteDatabase<typeof schema> | PostgresJsDatabase<typeof schema>;
+export type Db =
+  | PgliteDatabase<typeof schema>
+  | PostgresJsDatabase<typeof schema>;
 
 /**
  * Shared transaction type, derived structurally from Db['transaction'] so it

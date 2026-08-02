@@ -1,9 +1,13 @@
-import { NextResponse, type NextRequest } from "next/server";
 import { eq } from "drizzle-orm";
-import { getDb, entries, games } from "@/db";
+import { type NextRequest, NextResponse } from "next/server";
+import {
+  badRequest,
+  releaseYearOf,
+  withErrorHandling,
+} from "@/app/api/_lib/handler";
+import { entries, games, getDb } from "@/db";
+import { type IgdbGame, searchGames } from "@/lib/igdb";
 import { requireUser } from "@/lib/session";
-import { searchGames, type IgdbGame } from "@/lib/igdb";
-import { badRequest, releaseYearOf, withErrorHandling } from "@/app/api/_lib/handler";
 
 const SEARCH_RESULT_LIMIT = 8;
 

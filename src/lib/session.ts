@@ -9,10 +9,10 @@ if (typeof window !== "undefined") {
 }
 
 import { createHash } from "node:crypto";
-import { cache } from "react";
-import { cookies } from "next/headers";
 import { eq } from "drizzle-orm";
-import { getDb, sessions, users, type Session, type User } from "@/db";
+import { cookies } from "next/headers";
+import { cache } from "react";
+import { getDb, type Session, sessions, type User, users } from "@/db";
 
 /** Name of the cookie holding the raw session token. */
 export const SESSION_COOKIE_NAME = "session";
@@ -147,7 +147,10 @@ export async function invalidateSession(sessionId: string): Promise<void> {
  * `expires` mirroring the DB row's `expiresAt` so the client-side cookie
  * lifetime always matches server-side session validity.
  */
-export async function setSessionCookie(token: string, expiresAt: Date): Promise<void> {
+export async function setSessionCookie(
+  token: string,
+  expiresAt: Date
+): Promise<void> {
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE_NAME, token, {
     httpOnly: true,

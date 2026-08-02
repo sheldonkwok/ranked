@@ -1,18 +1,18 @@
 import { PGlite } from "@electric-sql/pglite";
+import { asc, eq } from "drizzle-orm";
 import { drizzle, type PgliteDatabase } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
-import { asc, eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import * as schema from "../db/schema";
 import {
-  TIER_BANDS,
-  TIER_ORDER,
   computeScore,
   getRankedEntries,
   getTierEntries,
   insertEntry,
   moveEntry,
   removeEntry,
+  TIER_BANDS,
+  TIER_ORDER,
 } from "./ranking";
 
 type TestDb = PgliteDatabase<typeof schema>;
@@ -254,7 +254,10 @@ describe("removeEntry", () => {
     await db.transaction((tx) => removeEntry(tx, USER_ID, ids[1]));
 
     const rows = await tierRows("liked");
-    expect(rows.map((r) => r.gameId)).toEqual([gamesList[0].id, gamesList[2].id]);
+    expect(rows.map((r) => r.gameId)).toEqual([
+      gamesList[0].id,
+      gamesList[2].id,
+    ]);
     expect(rows.map((r) => r.position)).toEqual([0, 1]);
     expect(rows.map((r) => Number(r.score))).toEqual([
       computeScore(0, 2, "liked"),
@@ -312,7 +315,12 @@ describe("getRankedEntries", () => {
       "Disliked1",
     ]);
     expect(ranked.every((r) => typeof r.score === "number")).toBe(true);
-    expect(ranked.map((r) => r.tier)).toEqual(["liked", "liked", "fine", "disliked"]);
+    expect(ranked.map((r) => r.tier)).toEqual([
+      "liked",
+      "liked",
+      "fine",
+      "disliked",
+    ]);
   });
 });
 

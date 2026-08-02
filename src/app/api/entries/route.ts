@@ -1,11 +1,11 @@
-import { NextResponse, type NextRequest } from "next/server";
 import { and, eq } from "drizzle-orm";
-import { getDb, entries, games, type Tier } from "@/db";
-import { requireUser } from "@/lib/session";
+import { type NextRequest, NextResponse } from "next/server";
+import { serializeEntries } from "@/app/api/_lib/entries";
+import { badRequest, withErrorHandling } from "@/app/api/_lib/handler";
+import { entries, games, getDb, type Tier } from "@/db";
 import { getGameByIgdbId, type IgdbGame } from "@/lib/igdb";
 import { getRankedEntries, getTierEntries, insertEntry } from "@/lib/ranking";
-import { badRequest, withErrorHandling } from "@/app/api/_lib/handler";
-import { serializeEntries } from "@/app/api/_lib/entries";
+import { requireUser } from "@/lib/session";
 
 const VALID_TIERS: readonly Tier[] = ["liked", "fine", "disliked"];
 
@@ -38,7 +38,12 @@ export async function GET(request: NextRequest) {
       excludeEntryId = Number(excludeParam);
     }
 
-    const tierEntries = await getTierEntries(db, user.id, tierParam, excludeEntryId);
+    const tierEntries = await getTierEntries(
+      db,
+      user.id,
+      tierParam,
+      excludeEntryId
+    );
     return NextResponse.json({ entries: serializeEntries(tierEntries) });
   });
 }
@@ -62,7 +67,11 @@ function parseCreateBody(body: unknown): CreateEntryBody {
   if (typeof tier !== "string" || !isTier(tier)) {
     throw badRequest(`invalid tier "${String(tier)}"`);
   }
-  if (typeof position !== "number" || !Number.isInteger(position) || position < 0) {
+  if (
+    typeof position !== "number" ||
+    !Number.isInteger(position) ||
+    position < 0
+  ) {
     throw badRequest("position must be a non-negative integer");
   }
 
@@ -138,6 +147,9 @@ export async function POST(request: NextRequest) {
     }
 
     const ranked = await getRankedEntries(db, user.id);
-    return NextResponse.json({ entries: serializeEntries(ranked) }, { status: 201 });
+    return NextResponse.json(
+      { entries: serializeEntries(ranked) },
+      { status: 201 }
+    );
   });
 }

@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { Tier } from "@/db/schema";
+import { useState } from "react";
 import RerankDialog, { type RerankGame } from "@/components/RerankDialog";
+import type { Tier } from "@/db/schema";
 
 type Mode = "idle" | "confirm-remove" | "removing" | "rerank";
 
@@ -90,9 +90,7 @@ export default function EntryActions({
         </>
       )}
 
-      {mode === "removing" && (
-        <span className="text-zinc-400">Removing…</span>
-      )}
+      {mode === "removing" && <span className="text-zinc-400">Removing…</span>}
 
       {mode === "rerank" && (
         <RerankDialog

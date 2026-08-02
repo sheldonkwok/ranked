@@ -24,7 +24,9 @@ type TokenCache = {
 
 let tokenCache: TokenCache | null = null;
 
-function getRequiredEnv(name: "TWITCH_CLIENT_ID" | "TWITCH_CLIENT_SECRET"): string {
+function getRequiredEnv(
+  name: "TWITCH_CLIENT_ID" | "TWITCH_CLIENT_SECRET"
+): string {
   const value = process.env[name];
   if (!value) {
     throw new Error(
@@ -82,7 +84,11 @@ async function getAccessToken(forceRefresh = false): Promise<string> {
   return fresh.accessToken;
 }
 
-async function performIgdbFetch(endpoint: string, body: string, accessToken: string) {
+async function performIgdbFetch(
+  endpoint: string,
+  body: string,
+  accessToken: string
+) {
   const clientId = getRequiredEnv("TWITCH_CLIENT_ID");
   return fetch(`${IGDB_API_BASE}/${endpoint}`, {
     method: "POST",
@@ -111,7 +117,9 @@ async function igdbRequest<T>(endpoint: string, body: string): Promise<T> {
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`IGDB request to "${endpoint}" failed (status ${res.status}): ${text}`);
+    throw new Error(
+      `IGDB request to "${endpoint}" failed (status ${res.status}): ${text}`
+    );
   }
 
   return (await res.json()) as T;
@@ -168,9 +176,13 @@ export async function searchGames(query: string): Promise<IgdbGame[]> {
   return results.map(normalizeGame);
 }
 
-export async function getGameByIgdbId(igdbId: number): Promise<IgdbGame | null> {
+export async function getGameByIgdbId(
+  igdbId: number
+): Promise<IgdbGame | null> {
   if (!Number.isInteger(igdbId) || igdbId <= 0) {
-    throw new Error(`getGameByIgdbId: igdbId must be a positive integer, got ${igdbId}`);
+    throw new Error(
+      `getGameByIgdbId: igdbId must be a positive integer, got ${igdbId}`
+    );
   }
   const body = `${GAME_FIELDS} where id = ${igdbId}; limit 1;`;
   const results = await igdbRequest<RawIgdbGame[]>("games", body);

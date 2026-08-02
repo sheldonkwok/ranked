@@ -1,13 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
-  comparisonReducer,
-  createInitialState,
   type ComparisonCandidate,
   type ComparisonState,
+  comparisonReducer,
+  createInitialState,
 } from "./useComparisonRanking";
 
 function candidate(id: number): ComparisonCandidate {
-  return { id, game: { name: `Game ${id}`, coverImageId: null, releaseYear: null } };
+  return {
+    id,
+    game: { name: `Game ${id}`, coverImageId: null, releaseYear: null },
+  };
 }
 
 function candidates(n: number): ComparisonCandidate[] {
@@ -110,7 +113,10 @@ describe("comparisonReducer: binary search walk", () => {
 
   it("ignores choose actions once done (idempotent terminal state)", () => {
     const done = run(createInitialState(candidates(3)), [true, true]);
-    const again = comparisonReducer(done, { type: "choose", newGameWins: false });
+    const again = comparisonReducer(done, {
+      type: "choose",
+      newGameWins: false,
+    });
     expect(again).toBe(done);
   });
 });

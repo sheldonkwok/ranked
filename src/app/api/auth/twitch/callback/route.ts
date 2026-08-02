@@ -1,5 +1,5 @@
-import { NextResponse, type NextRequest } from "next/server";
 import { cookies } from "next/headers";
+import { type NextRequest, NextResponse } from "next/server";
 import { getDb, users } from "@/db";
 import { fetchTwitchUser, getTwitchClient } from "@/lib/auth";
 import { createSession, setSessionCookie } from "@/lib/session";
