@@ -84,30 +84,20 @@ export default async function RootLayout({
                 </span>
               </Link>
               {user && (
-                <div className="flex items-center gap-2.5">
-                  <nav className="flex items-center gap-2.5">
-                    <Link href="/" className="pixel-btn">
-                      HOME
-                    </Link>
-                    <Link href="/add" className="pixel-btn">
-                      + ADD
-                    </Link>
-                  </nav>
-                  <Link href="/settings" className="ml-2 flex items-center gap-2.5">
-                    {user.avatarUrl ? (
-                      <Image
-                        src={user.avatarUrl}
-                        alt={user.displayName ?? user.username}
-                        width={24}
-                        height={24}
-                        className="border border-edge/60"
-                      />
-                    ) : (
-                      <div className="cover-hatch h-6 w-6 border border-edge/60" />
-                    )}
-                    <span className="text-[13px] text-ink-muted">{user.username}</span>
-                  </Link>
-                </div>
+                <Link href="/settings" className="flex items-center gap-2.5">
+                  {user.avatarUrl ? (
+                    <Image
+                      src={user.avatarUrl}
+                      alt={user.displayName ?? user.username}
+                      width={24}
+                      height={24}
+                      className="border border-edge/60"
+                    />
+                  ) : (
+                    <div className="cover-hatch h-6 w-6 border border-edge/60" />
+                  )}
+                  <span className="text-[13px] text-ink-muted">{user.username}</span>
+                </Link>
               )}
             </div>
           </header>
