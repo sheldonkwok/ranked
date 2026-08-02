@@ -11,6 +11,8 @@ import {
   insertEntry,
   moveEntry,
   removeEntry,
+  SCORE_UNLOCK_THRESHOLD,
+  scoresUnlocked,
   TIER_BANDS,
   TIER_ORDER,
 } from "./ranking";
@@ -83,6 +85,17 @@ describe("computeScore", () => {
     const score = computeScore(1, 7, "fine");
     expect(score).toBe(6.1);
     expect(Number.isInteger(score * 10)).toBe(true);
+  });
+});
+
+describe("scoresUnlocked", () => {
+  it("is false just below the threshold", () => {
+    expect(scoresUnlocked(SCORE_UNLOCK_THRESHOLD - 1)).toBe(false);
+  });
+
+  it("is true at and above the threshold", () => {
+    expect(scoresUnlocked(SCORE_UNLOCK_THRESHOLD)).toBe(true);
+    expect(scoresUnlocked(SCORE_UNLOCK_THRESHOLD + 1)).toBe(true);
   });
 });
 

@@ -20,6 +20,14 @@ export const TIER_BANDS: Record<Tier, { lo: number; hi: number }> = {
 
 export const TIER_ORDER: Tier[] = ["liked", "fine", "disliked"];
 
+/** Minimum total ranked entries (across all tiers) before scores are shown to the user. */
+export const SCORE_UNLOCK_THRESHOLD = 10;
+
+/** Whether a user with `entryCount` total ranked entries should see numeric scores. */
+export function scoresUnlocked(entryCount: number): boolean {
+  return entryCount >= SCORE_UNLOCK_THRESHOLD;
+}
+
 /** SQL fragment ordering rows by TIER_ORDER (liked, fine, disliked). */
 const tierOrderSql = sql`case ${entries.tier} when 'liked' then 0 when 'fine' then 1 when 'disliked' then 2 else 3 end`;
 

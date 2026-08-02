@@ -1,4 +1,5 @@
 import type { Tier } from "@/db/schema";
+import { SCORE_UNLOCK_THRESHOLD } from "@/lib/ranking";
 
 const TIER_STYLES: Record<Tier, string> = {
   liked: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
@@ -6,12 +7,13 @@ const TIER_STYLES: Record<Tier, string> = {
   disliked: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300",
 };
 
-export default function ScoreBadge({ score, tier }: { score: number; tier: Tier }) {
+export default function ScoreBadge({ score, tier }: { score: number | null; tier: Tier }) {
   return (
     <span
       className={`inline-flex min-w-10 items-center justify-center rounded-full px-2.5 py-1 text-sm font-semibold tabular-nums ${TIER_STYLES[tier]}`}
+      title={score === null ? `Score unlocks after ranking ${SCORE_UNLOCK_THRESHOLD} games` : undefined}
     >
-      {score.toFixed(1)}
+      {score === null ? "—" : score.toFixed(1)}
     </span>
   );
 }

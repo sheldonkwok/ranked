@@ -9,7 +9,7 @@ export type EntryRowProps = {
   name: string;
   coverImageId: string | null;
   releaseYear: number | null;
-  score: number;
+  score: number | null;
   tier: Tier;
 };
 
