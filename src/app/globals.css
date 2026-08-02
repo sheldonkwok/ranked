@@ -3,8 +3,8 @@
 /* Pixel Ranker design tokens — see Claude Design project "Pixel Ranker.dc.html".
    The app is dark-only by design; there is no light-mode variant. */
 @theme inline {
-  --font-pixel: var(--font-press-start-2p);
-  --font-sans: var(--font-silkscreen);
+  --font-pixel: var(--font-vt323);
+  --font-sans: var(--font-vt323);
 
   --color-bg: #05070f;
   --color-panel: #040812;
