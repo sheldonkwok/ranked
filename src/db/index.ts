@@ -1,3 +1,5 @@
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { drizzle as drizzlePglite, type PgliteDatabase } from "drizzle-orm/pglite";
 import { migrate as migratePglite } from "drizzle-orm/pglite/migrator";
 import { drizzle as drizzlePostgres, type PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -31,6 +33,26 @@ declare global {
   var __rankedDbInitPromise: Promise<Db> | undefined;
 }
 
+/**
+ * Where the local PGlite instance persists its files when POSTGRES_URL is
+ * unset.
+ *
+ * - Local dev: a repo-relative `./dev-db` dir (git-ignored, survives restarts).
+ * - Serverless (e.g. Vercel preview): the app's working directory is
+ *   `/var/task`, which is read-only, so a relative dir fails at write time.
+ *   Fall back to the OS temp dir (`/tmp`, the one writable location). Data
+ *   there is ephemeral — reset on cold start and not shared across instances —
+ *   which is fine for throwaway previews. Set POSTGRES_URL to get a real,
+ *   persistent Postgres instead.
+ *
+ * `PGLITE_DATA_DIR` overrides both if you need a specific path.
+ */
+function pgliteDataDir(): string {
+  if (process.env.PGLITE_DATA_DIR) return process.env.PGLITE_DATA_DIR;
+  if (process.env.VERCEL) return join(tmpdir(), "ranked-db");
+  return "./dev-db";
+}
+
 async function initDb(): Promise<Db> {
   const databaseUrl = process.env.POSTGRES_URL;
 
@@ -40,7 +62,7 @@ async function initDb(): Promise<Db> {
   }
 
   const db = drizzlePglite({
-    connection: { dataDir: "./dev-db" },
+    connection: { dataDir: pgliteDataDir() },
     schema,
   });
 
