@@ -163,7 +163,8 @@ describe("moveEntry", () => {
   it("moves an entry down within the same tier and recomputes scores once", async () => {
     const { gamesList } = await seedLikedTier(); // order: D, C, B, A
     const rowsBefore = await tierRows("liked");
-    const entryA = rowsBefore.find((r) => r.gameId === gamesList[0].id)!; // "A", currently last
+    const entryA = rowsBefore.find((r) => r.gameId === gamesList[0].id); // "A", currently last
+    if (!entryA) throw new Error("entryA not found in seeded rows");
 
     // Move A (index 3, excluding itself index range [0,3]) to the front (index 0)
     await db.transaction((tx) => moveEntry(tx, USER_ID, entryA.id, "liked", 0));
@@ -184,7 +185,8 @@ describe("moveEntry", () => {
   it("moves an entry up within the same tier", async () => {
     const { gamesList } = await seedLikedTier(); // order: D, C, B, A
     const rowsBefore = await tierRows("liked");
-    const entryD = rowsBefore.find((r) => r.gameId === gamesList[3].id)!; // "D", currently first
+    const entryD = rowsBefore.find((r) => r.gameId === gamesList[3].id); // "D", currently first
+    if (!entryD) throw new Error("entryD not found in seeded rows");
 
     // Move D (index 0) to the end of the remaining 3-entry list (index 2)
     await db.transaction((tx) => moveEntry(tx, USER_ID, entryD.id, "liked", 2));

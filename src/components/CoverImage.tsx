@@ -39,7 +39,7 @@ export default function CoverImage({
             className="h-full w-full object-cover"
           />
         ) : (
-          // eslint-disable-next-line @next/next/no-img-element -- external IGDB CDN image, dimensions vary
+          // biome-ignore lint/performance/noImgElement: external IGDB CDN image, dimensions vary
           <img
             src={coverUrl(coverImageId, size)}
             alt={alt}

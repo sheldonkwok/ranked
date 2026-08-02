@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { getDb, entries, games, type Tier } from "@/db";
 import { requireUser } from "@/lib/session";
-import { getGameByIgdbId } from "@/lib/igdb";
+import { getGameByIgdbId, type IgdbGame } from "@/lib/igdb";
 import { getRankedEntries, getTierEntries, insertEntry } from "@/lib/ranking";
 import { badRequest, withErrorHandling } from "@/app/api/_lib/handler";
 import { serializeEntries } from "@/app/api/_lib/entries";
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
     }
     const { igdbId, tier, position } = parseCreateBody(rawBody);
 
-    let igdbGame;
+    let igdbGame: IgdbGame | null;
     try {
       igdbGame = await getGameByIgdbId(igdbId);
     } catch (err) {

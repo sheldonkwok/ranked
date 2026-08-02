@@ -15,13 +15,15 @@ never entered by hand.
 - Twitch OAuth via Arctic; hand-rolled DB sessions (Lucia pattern)
 - IGDB API for game search/metadata (auth rides on the same Twitch app credentials)
 - Vitest for unit tests
+- pnpm instead of npm
 
 ## Commands
 
-- `npm run dev` / `npm run build` / `npm run lint` / `npm test`
-- `npm run db:generate` — drizzle-kit generate after editing `src/db/schema.ts`
-- `npm run db:migrate:prod` — apply migrations (needs direct `DATABASE_URL`)
-- `npm run db:reset` — delete the local PGlite data dir
+- `pnpm dev` / `pnpm build` / `pnpm lint` / `pnpm test`
+- `pnpm lint` runs Biome (`biome check`, lint + format check); `pnpm format` applies fixes
+- `pnpm db:generate` — drizzle-kit generate after editing `src/db/schema.ts`
+- `pnpm db:migrate:prod` — apply migrations (needs direct `DATABASE_URL`)
+- `pnpm db:reset` — delete the local PGlite data dir
 
 ## Layout
 

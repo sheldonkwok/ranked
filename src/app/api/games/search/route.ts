@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { eq } from "drizzle-orm";
 import { getDb, entries, games } from "@/db";
 import { requireUser } from "@/lib/session";
-import { searchGames } from "@/lib/igdb";
+import { searchGames, type IgdbGame } from "@/lib/igdb";
 import { badRequest, releaseYearOf, withErrorHandling } from "@/app/api/_lib/handler";
 
 const SEARCH_RESULT_LIMIT = 8;
@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
       throw badRequest("q must be at least 2 characters");
     }
 
-    let results;
+    let results: IgdbGame[];
     try {
       results = await searchGames(q);
     } catch (err) {

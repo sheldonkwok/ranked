@@ -148,6 +148,7 @@ export default function AddFlow() {
   // Auto-submit once the comparison loop lands on a final position
   // (including the empty-tier case, where the hook completes immediately
   // with zero comparisons).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: submit reads the deps already listed; adding it (redefined every render) would re-fire this effect on every render
   useEffect(() => {
     if (
       phase === "comparing" &&
@@ -158,7 +159,6 @@ export default function AddFlow() {
       submittedForRef.current = candidates;
       submit(comparison.finalPosition);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, comparison.status, comparison.finalPosition, candidates]);
 
   function handleSkip() {
