@@ -7,11 +7,11 @@ export default function RankedList({ entries }: { entries: RankedEntry[] }) {
   return (
     <>
       {!unlocked && (
-        <p className="border-b border-zinc-200 py-3 text-sm text-zinc-600 dark:border-zinc-800 dark:text-zinc-400">
-          Rank {SCORE_UNLOCK_THRESHOLD} games to unlock scores — {entries.length} of {SCORE_UNLOCK_THRESHOLD} so far.
+        <p className="pixel-panel mb-4 px-4 py-3 text-[13px] tracking-[1px] text-ink-dim">
+          RANK {SCORE_UNLOCK_THRESHOLD} GAMES TO UNLOCK SCORES — {entries.length} OF {SCORE_UNLOCK_THRESHOLD} SO FAR.
         </p>
       )}
-      <ol className="divide-y divide-zinc-200 dark:divide-zinc-800">
+      <ol className="pixel-panel p-1.5">
         {entries.map((entry, index) => (
           <EntryRow
             key={entry.id}

@@ -7,8 +7,8 @@ export const metadata: Metadata = {
 
 export default function AddPage() {
   return (
-    <div className="mx-auto flex max-w-lg flex-col gap-6">
-      <h1 className="text-xl font-semibold">Add a game</h1>
+    <div className="mx-auto flex max-w-[660px] flex-col gap-5">
+      <h1 className="pixel-heading text-[18px]">ADD A GAME</h1>
       <AddFlow />
     </div>
   );

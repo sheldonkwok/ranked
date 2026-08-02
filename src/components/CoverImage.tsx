@@ -43,11 +43,8 @@ export default function CoverImage({
           <img src={coverUrl(coverImageId, size)} alt={alt} className="h-full w-full object-cover" />
         )
       ) : (
-        <div
-          aria-hidden="true"
-          className="flex h-full w-full items-center justify-center bg-zinc-200 text-base dark:bg-zinc-800"
-        >
-          🎮
+        <div aria-hidden="true" className="cover-hatch flex h-full w-full items-center justify-center">
+          <span className="font-pixel text-[6px] text-ink-faint">COVER</span>
         </div>
       )}
     </div>

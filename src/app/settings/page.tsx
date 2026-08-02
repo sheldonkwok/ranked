@@ -27,16 +27,16 @@ export default async function SettingsPage() {
           alt={user.displayName ?? user.username}
           width={96}
           height={96}
-          className="rounded-full"
+          className="border border-edge/60"
         />
       ) : (
-        <div className="h-24 w-24 rounded-full bg-zinc-200 dark:bg-zinc-800" />
+        <div className="cover-hatch h-24 w-24 border border-edge/60" />
       )}
 
-      <div className="flex flex-col gap-1">
-        <h1 className="text-xl font-semibold">{user.displayName ?? user.username}</h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">@{user.username}</p>
-        <p className="text-xs text-zinc-500 dark:text-zinc-500">Member since {memberSince}</p>
+      <div className="flex flex-col gap-2">
+        <h1 className="pixel-heading text-[18px]">{(user.displayName ?? user.username).toUpperCase()}</h1>
+        <p className="text-sm tracking-[1px] text-ink-dim">@{user.username}</p>
+        <p className="text-xs tracking-[1px] text-ink-faint">MEMBER SINCE {memberSince.toUpperCase()}</p>
       </div>
 
       <SignOutButton />

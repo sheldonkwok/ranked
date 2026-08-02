@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import CoverImage from "@/components/CoverImage";
+import Banner from "@/components/ui/Banner";
+import PixelLoader from "@/components/ui/PixelLoader";
 
 export type GameSearchResult = {
   igdbId: number;
@@ -107,69 +109,70 @@ export default function GameSearch({ onSelectAction }: { onSelectAction: (game: 
   return (
     <div className="flex flex-col gap-4">
       <form onSubmit={handleSubmit} className="flex flex-col gap-1.5">
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search for a game…"
-          // biome-ignore lint/a11y/noAutofocus: this is the sole control on a dedicated /add search step, not a page loaded incidentally
-          autoFocus
-          className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-500"
-        />
-        <p className="text-xs text-zinc-500">Results appear as you type — press Enter to search now.</p>
+        <div className="pixel-panel flex items-center gap-3 px-4 py-3">
+          <span className="font-pixel text-[10px] text-gold-bright">&gt;</span>
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="SEARCH A TITLE"
+            // biome-ignore lint/a11y/noAutofocus: this is the sole control on a dedicated /add search step, not a page loaded incidentally
+            autoFocus
+            className="flex-1 bg-transparent py-1 text-[17px] tracking-[1px] text-ink outline-none placeholder:text-ink-placeholder"
+          />
+          <span className="blink h-5 w-[9px] bg-ink" aria-hidden="true" />
+        </div>
+        <p className="text-xs tracking-[0.5px] text-ink-faint">
+          Results appear as you type — press Enter to search now.
+        </p>
       </form>
 
       {trimmedQuery.length > 0 && trimmedQuery.length < MIN_QUERY_LENGTH && (
-        <p className="text-sm text-zinc-500">Keep typing ({MIN_QUERY_LENGTH}+ characters)…</p>
+        <p className="text-sm text-ink-dim">Keep typing ({MIN_QUERY_LENGTH}+ characters)…</p>
       )}
 
       {/* Once the query drops below the minimum length, the effect stops
           updating `state`, so we gate all of its branches on the current
           query length here rather than resetting state synchronously. */}
-      {trimmedQuery.length >= MIN_QUERY_LENGTH && state.kind === "loading" && (
-        <div className="flex items-center gap-2 py-4 text-sm text-zinc-500">
-          <span
-            aria-hidden
-            className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-600 dark:border-zinc-700 dark:border-t-zinc-300"
-          />
-          Searching…
-        </div>
-      )}
+      {trimmedQuery.length >= MIN_QUERY_LENGTH && state.kind === "loading" && <PixelLoader label="Searching…" />}
 
       {trimmedQuery.length >= MIN_QUERY_LENGTH && state.kind === "error" && (
-        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-950/50 dark:text-red-400">
-          {state.message}
-        </p>
+        <Banner variant="error">{state.message}</Banner>
       )}
 
       {trimmedQuery.length >= MIN_QUERY_LENGTH && state.kind === "results" && state.results.length === 0 && (
-        <p className="text-sm text-zinc-500">No games found for &quot;{trimmedQuery}&quot;.</p>
+        <div className="pixel-panel px-10 py-10 text-center text-[14px] tracking-[1px] text-ink-faint">
+          NO CARTRIDGES FOUND
+        </div>
       )}
 
       {trimmedQuery.length >= MIN_QUERY_LENGTH && state.kind === "results" && state.results.length > 0 && (
-        <ul className="flex flex-col divide-y divide-zinc-200 dark:divide-zinc-800">
+        <ul className="pixel-panel flex flex-col p-1.5">
           {state.results.map((game) => (
             <li key={game.igdbId}>
               <button
                 type="button"
                 onClick={() => onSelectAction(game)}
-                className="flex w-full items-center gap-3 py-3 text-left hover:bg-zinc-50 dark:hover:bg-zinc-900"
+                className="pixel-row grid w-full items-center gap-4 p-[11px_14px] text-left"
+                style={{ gridTemplateColumns: "42px 1fr auto" }}
               >
                 <CoverImage
                   coverImageId={game.coverImageId}
                   size="cover_small"
-                  className="h-16 w-12 shrink-0 rounded"
+                  className="h-14 w-[42px] shrink-0 border border-edge/45"
                 />
 
-                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <div className="flex items-center gap-2">
-                    <span className="truncate text-sm font-medium">{game.name}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-zinc-500">
+                <div className="flex min-w-0 flex-col gap-1.5">
+                  <span className="truncate text-[16px] text-ink" style={{ textShadow: "0 2px 4px rgba(0,0,0,0.9)" }}>
+                    {game.name}
+                  </span>
+                  <div className="flex items-center gap-2 text-xs tracking-[1px] text-ink-dim">
                     {game.releaseYear && <span>{game.releaseYear}</span>}
                     {game.platforms.length > 0 && <span className="truncate">{game.platforms.join(", ")}</span>}
                   </div>
                 </div>
+
+                <span className="font-pixel text-[8px] text-gold-bright">PICK</span>
               </button>
             </li>
           ))}

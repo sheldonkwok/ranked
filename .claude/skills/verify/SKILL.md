@@ -22,11 +22,12 @@ the system browser:
 ```js
 import { chromium } from "playwright-core";
 const browser = await chromium.launch({ executablePath: "/usr/bin/chromium", headless: true });
-const ctx = await browser.newContext({ colorScheme: "dark" }); // or "light"
+const ctx = await browser.newContext({ colorScheme: "dark" });
 ```
 
-Dark mode is media-query based (`prefers-color-scheme`), so `colorScheme` on the
-context is how you flip themes.
+The app is dark-only (Pixel Ranker design) — there's no light-mode variant to flip to,
+`colorScheme` above is just to avoid a light-mode `prefers-color-scheme` default leaking
+through anywhere unstyled.
 
 ## Flows worth driving
 
@@ -42,3 +43,6 @@ context is how you flip themes.
 - IGDB search hits the real API — needs network + the Twitch creds in `.env`.
 - Screenshots right after results appear may show unloaded cover images; wait
   for `networkidle` or an extra beat if covers matter.
+- Turbopack's dev cache can serve a stale CSS chunk after editing `globals.css` —
+  same file hash, old rules, even across a plain `next dev` restart. If a class
+  you just added/changed isn't showing up, `rm -rf .next` before restarting.

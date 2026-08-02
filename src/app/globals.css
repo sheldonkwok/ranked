@@ -1,22 +1,290 @@
 @import "tailwindcss";
 
+/* Pixel Ranker design tokens — see Claude Design project "Pixel Ranker.dc.html".
+   The app is dark-only by design; there is no light-mode variant. */
 @theme inline {
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-pixel: var(--font-press-start-2p);
+  --font-sans: var(--font-silkscreen);
+
+  --color-bg: #05070f;
+  --color-panel: #040812;
+
+  --color-ink: #f2f6ff;
+  --color-ink-muted: #b6c4de;
+  --color-ink-dim: #93a3c2;
+  --color-ink-faint: #8fa2c4;
+  --color-ink-placeholder: #6d7d99;
+
+  --color-edge: #dcebff;
+
+  --color-gold: #d8b25c;
+  --color-gold-bright: #e8d59a;
+  --color-gold-pale: #f6e3b0;
+
+  --color-blue: #2f6bd8;
+  --color-blue-bright: #6ea8ff;
+  --color-blue-deep: #1e3a78;
+
+  --color-link: #9fd0ff;
+
+  --color-liked: #3a9660;
+  --color-liked-edge: #b4f0cd;
+  --color-liked-ink: #eaffef;
+
+  --color-fine: #c6983a;
+  --color-fine-edge: #f6e3b0;
+  --color-fine-ink: #fff6e2;
+
+  --color-disliked: #ae3e50;
+  --color-disliked-edge: #f6bac4;
+  --color-disliked-ink: #ffeaee;
+
+  --color-danger: #ff8fa0;
+  --color-danger-ink: #ffb3bd;
 }
 
-html {
-  color-scheme: light dark;
-}
+@layer base {
+  html {
+    color-scheme: dark;
+  }
 
-body {
-  background-color: var(--color-white);
-  color: var(--color-zinc-900);
-}
-
-@media (prefers-color-scheme: dark) {
   body {
-    background-color: var(--color-zinc-950);
-    color: var(--color-zinc-100);
+    background-color: var(--color-bg);
+    color: var(--color-ink);
+  }
+
+  a {
+    color: var(--color-link);
+  }
+  a:hover {
+    color: var(--color-ink);
+  }
+
+  ::selection {
+    background: var(--color-blue);
+    color: var(--color-ink);
+  }
+}
+
+@layer components {
+  /* Bordered gradient container used for list panels, cards, modals. */
+  .pixel-panel {
+    border: 1px solid color-mix(in srgb, var(--color-edge) 50%, transparent);
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--color-panel) 95%, transparent) 0%,
+      color-mix(in srgb, var(--color-panel) 90%, transparent) 100%
+    );
+    box-shadow:
+      0 0 0 1px rgba(0, 0, 0, 0.6),
+      0 10px 30px rgba(0, 0, 0, 0.55);
+  }
+
+  /* A row inside a .pixel-panel list — resting sheen + blue sweep on hover. */
+  .pixel-row {
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0) 60%);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-edge) 12%, transparent);
+  }
+  .pixel-row:hover {
+    background: linear-gradient(
+      90deg,
+      rgba(46, 104, 220, 0.95) 0%,
+      rgba(20, 44, 104, 0.35) 70%,
+      rgba(20, 44, 104, 0) 100%
+    );
+  }
+
+  /* EntryRow's grid. `auto` tracks (rank/cover/meta) never shrink below their
+     content, so on narrow viewports they'd otherwise squeeze the `1fr` title
+     track toward zero — below ~480px the meta column (score + actions) drops
+     to its own line instead of fighting the title for horizontal space. */
+  .entry-row-grid {
+    display: grid;
+    grid-template-columns: 44px 42px 1fr auto;
+    column-gap: 1rem;
+  }
+  @media (max-width: 479px) {
+    .entry-row-grid {
+      grid-template-columns: 36px 36px 1fr;
+      grid-template-areas:
+        "rank cover title"
+        "rank cover meta";
+      column-gap: 0.75rem;
+      row-gap: 6px;
+    }
+    .entry-row-grid .entry-rank {
+      grid-area: rank;
+    }
+    .entry-row-grid .entry-cover {
+      grid-area: cover;
+      width: 36px;
+      height: 48px;
+    }
+    .entry-row-grid .entry-title {
+      grid-area: title;
+    }
+    .entry-row-grid .entry-meta {
+      grid-area: meta;
+    }
+  }
+
+  /* Secondary nav/utility button. */
+  .pixel-btn {
+    font-family: var(--font-sans);
+    font-size: 14px;
+    letter-spacing: 1px;
+    white-space: nowrap;
+    padding: 9px 14px;
+    background: linear-gradient(90deg, rgba(30, 58, 120, 0.85) 0%, rgba(8, 14, 30, 0.5) 100%);
+    color: #dce8ff;
+    border: 1px solid color-mix(in srgb, var(--color-edge) 45%, transparent);
+    cursor: pointer;
+    transition:
+      color 0.1s ease,
+      border-color 0.1s ease,
+      background 0.1s ease;
+  }
+  .pixel-btn:hover {
+    border-color: #ffffff;
+    color: #ffffff;
+    background: linear-gradient(90deg, rgba(50, 104, 220, 0.95) 0%, rgba(20, 40, 90, 0.6) 100%);
+  }
+
+  /* Primary CTA — gold gradient. */
+  .pixel-btn-gold {
+    font-family: var(--font-sans);
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 1px;
+    padding: 14px 18px;
+    background: linear-gradient(90deg, rgba(216, 178, 92, 0.95) 0%, rgba(150, 112, 40, 0.75) 100%);
+    color: #14100a;
+    border: 1px solid var(--color-gold-pale);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.1s ease;
+  }
+  .pixel-btn-gold:hover {
+    background: linear-gradient(90deg, #f2d489 0%, rgba(190, 146, 60, 0.9) 100%);
+  }
+  .pixel-btn-gold:active {
+    transform: translateY(2px);
+  }
+
+  /* Small inline text-style action (RE-RANK / DEL / SIGN OUT). */
+  .pixel-btn-ghost {
+    font-family: var(--font-sans);
+    font-size: 11px;
+    letter-spacing: 1px;
+    white-space: nowrap;
+    padding: 8px 10px;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--color-ink-muted);
+    border: 1px solid color-mix(in srgb, var(--color-edge) 30%, transparent);
+    cursor: pointer;
+    transition:
+      color 0.1s ease,
+      border-color 0.1s ease;
+  }
+  .pixel-btn-ghost:hover {
+    color: #ffffff;
+    border-color: #ffffff;
+  }
+  .pixel-btn-ghost-danger:hover {
+    color: var(--color-danger-ink);
+    border-color: var(--color-danger);
+  }
+  .pixel-btn-ghost:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  /* Large tier-picker buttons. */
+  .tier-btn {
+    font-family: var(--font-sans);
+    font-weight: 700;
+    font-size: 16px;
+    letter-spacing: 1px;
+    text-align: left;
+    padding: 17px 20px;
+    width: 100%;
+    cursor: pointer;
+    transition: background 0.1s ease;
+  }
+  .tier-btn:active {
+    transform: translateY(2px);
+  }
+  .tier-btn-liked {
+    background: linear-gradient(90deg, rgba(58, 150, 96, 1) 0%, rgba(8, 18, 30, 0.96) 78%);
+    color: var(--color-liked-ink);
+    border: 1px solid color-mix(in srgb, var(--color-liked-edge) 75%, transparent);
+  }
+  .tier-btn-liked:hover {
+    background: linear-gradient(90deg, rgba(80, 190, 124, 1) 0%, rgba(14, 32, 44, 0.97) 78%);
+  }
+  .tier-btn-fine {
+    background: linear-gradient(90deg, rgba(198, 152, 58, 1) 0%, rgba(8, 18, 30, 0.96) 78%);
+    color: var(--color-fine-ink);
+    border: 1px solid color-mix(in srgb, var(--color-fine-edge) 75%, transparent);
+  }
+  .tier-btn-fine:hover {
+    background: linear-gradient(90deg, rgba(232, 186, 84, 1) 0%, rgba(14, 32, 44, 0.97) 78%);
+  }
+  .tier-btn-disliked {
+    background: linear-gradient(90deg, rgba(174, 62, 80, 1) 0%, rgba(8, 18, 30, 0.96) 78%);
+    color: var(--color-disliked-ink);
+    border: 1px solid color-mix(in srgb, var(--color-disliked-edge) 75%, transparent);
+  }
+  .tier-btn-disliked:hover {
+    background: linear-gradient(90deg, rgba(206, 80, 100, 1) 0%, rgba(14, 32, 44, 0.97) 78%);
+  }
+
+  /* Section/page headings in the pixel display face. */
+  .pixel-heading {
+    font-family: var(--font-pixel);
+    line-height: 1.5;
+    color: #ffffff;
+    text-shadow:
+      0 3px 6px rgba(0, 0, 0, 0.95),
+      0 0 18px rgba(120, 170, 255, 0.35);
+  }
+
+  /* Legibility shadow for body text sitting directly over the artwork. */
+  .pixel-text-shadow {
+    text-shadow:
+      0 0 10px rgba(0, 0, 0, 0.95),
+      0 2px 4px rgba(0, 0, 0, 1);
+  }
+
+  /* Diagonal hatch fill for missing covers and loading skeletons. */
+  .cover-hatch {
+    background-image: repeating-linear-gradient(
+      135deg,
+      rgba(120, 150, 200, 0.18) 0px,
+      rgba(120, 150, 200, 0.18) 5px,
+      rgba(10, 16, 32, 0.5) 5px,
+      rgba(10, 16, 32, 0.5) 10px
+    );
+  }
+}
+
+@keyframes blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.blink {
+  animation: blink 1s steps(1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blink {
+    animation: none;
   }
 }

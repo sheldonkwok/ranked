@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import RerankDialog, { type RerankGame } from "@/components/RerankDialog";
+import PixelLoader from "@/components/ui/PixelLoader";
 import type { Tier } from "@/db/schema";
 
 type Mode = "idle" | "confirm-remove" | "removing" | "rerank";
@@ -37,48 +38,40 @@ export default function EntryActions({ entryId, game, tier }: { entryId: number;
   }
 
   return (
-    <div className="flex shrink-0 items-center gap-2 text-xs">
+    <div className="flex shrink-0 items-center gap-2">
       {mode === "idle" && (
         <>
-          <button
-            type="button"
-            onClick={() => setMode("rerank")}
-            className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
-          >
-            Re-rank
+          <button type="button" onClick={() => setMode("rerank")} className="pixel-btn-ghost">
+            RE-RANK
           </button>
           <button
             type="button"
             onClick={() => setMode("confirm-remove")}
-            className="text-zinc-400 hover:text-red-600 dark:hover:text-red-400"
+            className="pixel-btn-ghost pixel-btn-ghost-danger"
           >
-            Remove
+            DEL
           </button>
         </>
       )}
 
       {mode === "confirm-remove" && (
         <>
-          <span className="text-zinc-500">Remove?</span>
+          <span className="text-[11px] tracking-[1px] text-ink-dim">SURE?</span>
           <button
             type="button"
             onClick={handleConfirmRemove}
-            className="font-medium text-red-600 hover:text-red-700 dark:text-red-400"
+            className="pixel-btn-ghost pixel-btn-ghost-danger border-danger/50 text-danger-ink"
           >
-            Yes
+            YES
           </button>
-          <button
-            type="button"
-            onClick={() => setMode("idle")}
-            className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
-          >
-            No
+          <button type="button" onClick={() => setMode("idle")} className="pixel-btn-ghost">
+            NO
           </button>
-          {removeError && <span className="text-red-600 dark:text-red-400">{removeError}</span>}
+          {removeError && <span className="text-[11px] text-danger-ink">{removeError}</span>}
         </>
       )}
 
-      {mode === "removing" && <span className="text-zinc-400">Removing…</span>}
+      {mode === "removing" && <PixelLoader />}
 
       {mode === "rerank" && (
         <RerankDialog entryId={entryId} game={game} currentTier={tier} onCloseAction={() => setMode("idle")} />

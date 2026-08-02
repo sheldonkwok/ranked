@@ -1,19 +1,25 @@
 import type { Tier } from "@/db/schema";
-import { SCORE_UNLOCK_THRESHOLD } from "@/lib/ranking";
 
+// Tints the numeral itself, since the badge is the only per-row tier signal
+// in the pixel design (there's no colored pill background anymore).
 const TIER_STYLES: Record<Tier, string> = {
-  liked: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
-  fine: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
-  disliked: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300",
+  liked: "text-liked-edge",
+  fine: "text-fine-edge",
+  disliked: "text-disliked-edge",
 };
 
+// Renders nothing when locked — RankedList's nudge banner already explains
+// why, and the grid column collapses instead of showing a placeholder dash.
 export default function ScoreBadge({ score, tier }: { score: number | null; tier: Tier }) {
+  if (score === null) {
+    return null;
+  }
+
   return (
     <span
-      className={`inline-flex min-w-10 items-center justify-center rounded-full px-2.5 py-1 text-sm font-semibold tabular-nums ${TIER_STYLES[tier]}`}
-      title={score === null ? `Score unlocks after ranking ${SCORE_UNLOCK_THRESHOLD} games` : undefined}
+      className={`font-pixel min-w-[78px] border-b-2 border-edge/50 pb-[5px] text-right text-[15px] tabular-nums ${TIER_STYLES[tier]}`}
     >
-      {score === null ? "—" : score.toFixed(1)}
+      {score.toFixed(1)}
     </span>
   );
 }

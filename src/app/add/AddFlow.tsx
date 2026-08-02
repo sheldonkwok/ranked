@@ -6,17 +6,24 @@ import ComparisonModal from "@/components/ComparisonModal";
 import CoverImage from "@/components/CoverImage";
 import GameSearch, { type GameSearchResult } from "@/components/GameSearch";
 import TierPicker from "@/components/TierPicker";
+import Banner from "@/components/ui/Banner";
+import PixelLoader from "@/components/ui/PixelLoader";
 import type { Tier } from "@/db/schema";
 import { type ComparisonCandidate, useComparisonRanking } from "@/hooks/useComparisonRanking";
+import { scoresUnlocked } from "@/lib/ranking";
+import { TIER_LABEL } from "@/lib/tiers";
 
 type Phase = "search" | "tier" | "loading-candidates" | "comparing" | "submitting" | "failed";
 
 type FailureKind = "conflict" | "igdb" | "generic";
 
-const TIER_LABEL: Record<Tier, string> = {
-  liked: "Liked it",
-  fine: "It was fine",
-  disliked: "Didn't like it",
+type SerializedEntry = {
+  id: number;
+  tier: Tier;
+  position: number;
+  score: number;
+  globalRank: number;
+  game: { id: number; igdbId: number; name: string; coverImageId: string | null; releaseYear: number | null };
 };
 
 export default function AddFlow() {
@@ -101,7 +108,11 @@ export default function AddFlow() {
       });
 
       if (res.status === 201) {
-        router.push("/");
+        const data = (await res.json()) as { entries: SerializedEntry[] };
+        const newEntry = data.entries.find((entry) => entry.game.igdbId === selectedGame.igdbId);
+        const unlocked = scoresUnlocked(data.entries.length);
+        const ranked = unlocked && newEntry ? newEntry.score.toFixed(1) : "hidden";
+        router.push(`/?ranked=${ranked}`);
         router.refresh();
         return;
       }
@@ -150,7 +161,7 @@ export default function AddFlow() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       {phase === "search" && <GameSearch onSelectAction={handleSelectGame} />}
 
       {(phase === "tier" ||
@@ -159,46 +170,39 @@ export default function AddFlow() {
         phase === "submitting" ||
         phase === "failed") &&
         selectedGame && (
-          <div className="flex items-center gap-3 rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
+          <div
+            className="flex items-center gap-[18px] border border-edge/70 px-[18px] py-4"
+            style={{ background: "linear-gradient(90deg, rgba(46,104,220,1) 0%, rgba(6,12,28,0.96) 72%)" }}
+          >
             <CoverImage
               coverImageId={selectedGame.coverImageId}
               size="cover_small"
-              className="h-16 w-12 shrink-0 rounded"
+              className="h-[70px] w-[52px] shrink-0 border border-edge/65"
             />
-            <div className="flex flex-col gap-0.5">
-              <span className="text-sm font-medium">{selectedGame.name}</span>
-              {selectedGame.releaseYear && <span className="text-xs text-zinc-500">{selectedGame.releaseYear}</span>}
-              {tier && <span className="text-xs text-zinc-500">{TIER_LABEL[tier]}</span>}
+            <div className="flex flex-col gap-2">
+              <span className="text-[19px] text-ink" style={{ textShadow: "0 2px 4px rgba(0,0,0,0.9)" }}>
+                {selectedGame.name}
+              </span>
+              <span className="text-xs tracking-[1px] text-ink-muted">
+                {[selectedGame.releaseYear, tier ? TIER_LABEL[tier] : null].filter(Boolean).join("  ·  ")}
+              </span>
             </div>
           </div>
         )}
 
       {phase === "tier" && (
         <div className="flex flex-col gap-4">
-          {tierError && (
-            <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-950/50 dark:text-red-400">
-              {tierError}
-            </p>
-          )}
+          {tierError && <Banner variant="error">{tierError}</Banner>}
+          <p className="font-pixel pixel-text-shadow text-[9px] tracking-[1px] text-ink">HOW WAS IT?</p>
           <TierPicker onPick={handlePickTier} />
-          <button
-            type="button"
-            onClick={backToSearch}
-            className="self-start text-sm text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
-          >
-            ← Back
+          <button type="button" onClick={backToSearch} className="pixel-text-shadow self-start text-sm text-ink">
+            &lt; BACK TO RESULTS
           </button>
         </div>
       )}
 
       {phase === "loading-candidates" && (
-        <div className="flex items-center gap-2 py-4 text-sm text-zinc-500">
-          <span
-            aria-hidden
-            className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-600 dark:border-zinc-700 dark:border-t-zinc-300"
-          />
-          Loading your {tier ? TIER_LABEL[tier].toLowerCase() : ""} games…
-        </div>
+        <PixelLoader className="py-4" label={`Loading your ${tier ? TIER_LABEL[tier].toLowerCase() : ""} games…`} />
       )}
 
       {phase === "comparing" && selectedGame && comparison.currentCandidate && (
@@ -211,70 +215,48 @@ export default function AddFlow() {
             comparisonsDone={comparison.comparisonsDone}
             maxComparisons={comparison.maxComparisons}
           />
-          <button
-            type="button"
-            onClick={backToTier}
-            className="self-start text-sm text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
-          >
-            ← Back
+          <button type="button" onClick={backToTier} className="pixel-text-shadow self-start text-sm text-ink">
+            &lt; BACK
           </button>
         </div>
       )}
 
       {(phase === "submitting" || (phase === "comparing" && !comparison.currentCandidate)) && (
-        <div className="flex items-center gap-2 py-4 text-sm text-zinc-500">
-          <span
-            aria-hidden
-            className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-600 dark:border-zinc-700 dark:border-t-zinc-300"
-          />
-          Saving…
-        </div>
+        <PixelLoader className="py-4" label="Saving…" />
       )}
 
       {phase === "failed" && (
         <div className="flex flex-col gap-4">
           {failure === "conflict" && (
-            <div className="flex flex-col gap-3 rounded-md bg-amber-50 px-3 py-3 text-sm text-amber-800 dark:bg-amber-950/50 dark:text-amber-300">
-              <p>You&apos;ve already ranked this game.</p>
-              <button
-                type="button"
-                onClick={() => router.push("/")}
-                className="self-start rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
-              >
-                Go to home
+            <div className="flex flex-col gap-3">
+              <Banner variant="warn">You&apos;ve already ranked this game.</Banner>
+              <button type="button" onClick={() => router.push("/")} className="pixel-btn-ghost self-start">
+                GO TO HOME
               </button>
             </div>
           )}
 
           {failure === "igdb" && (
-            <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-950/50 dark:text-red-400">
-              Game search is unavailable (IGDB credentials not configured).
-            </p>
+            <Banner variant="error">Game search is unavailable (IGDB credentials not configured).</Banner>
           )}
 
-          {failure === "generic" && (
-            <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-950/50 dark:text-red-400">
-              Something went wrong saving this game. Try again.
-            </p>
-          )}
+          {failure === "generic" && <Banner variant="error">Something went wrong saving this game. Try again.</Banner>}
 
-          <div className="flex gap-3">
+          <div className="flex items-center gap-4">
             {failure !== "conflict" && comparison.finalPosition !== null && (
               <button
                 type="button"
                 onClick={() => submit(comparison.finalPosition as number)}
-                className="rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+                className="pixel-btn-ghost"
               >
-                Try again
+                TRY AGAIN
               </button>
             )}
-            <button
-              type="button"
-              onClick={backToTier}
-              className="text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
-            >
-              ← Back
-            </button>
+            {failure !== "conflict" && (
+              <button type="button" onClick={backToTier} className="pixel-btn-ghost">
+                ← BACK
+              </button>
+            )}
           </div>
         </div>
       )}
