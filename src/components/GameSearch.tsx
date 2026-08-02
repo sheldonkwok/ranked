@@ -10,8 +10,7 @@ export type GameSearchResult = {
   firstReleaseDate: string | null;
   releaseYear: number | null;
   platforms: string[];
-  summary: string;
-  alreadyRanked: boolean;
+  summary: string | null;
 };
 
 type SearchState =
@@ -22,7 +21,6 @@ type SearchState =
 
 const MIN_QUERY_LENGTH = 2;
 const DEBOUNCE_MS = 300;
-const MAX_RESULTS = 5;
 
 export default function GameSearch({
   onSelectAction,
@@ -166,13 +164,12 @@ export default function GameSearch({
         state.kind === "results" &&
         state.results.length > 0 && (
         <ul className="flex flex-col divide-y divide-zinc-200 dark:divide-zinc-800">
-          {state.results.slice(0, MAX_RESULTS).map((game) => (
+          {state.results.map((game) => (
             <li key={game.igdbId}>
               <button
                 type="button"
-                disabled={game.alreadyRanked}
                 onClick={() => onSelectAction(game)}
-                className="flex w-full items-center gap-3 py-3 text-left disabled:cursor-not-allowed disabled:opacity-50 enabled:hover:bg-zinc-50 dark:enabled:hover:bg-zinc-900"
+                className="flex w-full items-center gap-3 py-3 text-left hover:bg-zinc-50 dark:hover:bg-zinc-900"
               >
                 <CoverImage
                   coverImageId={game.coverImageId}
@@ -185,11 +182,6 @@ export default function GameSearch({
                     <span className="truncate text-sm font-medium">
                       {game.name}
                     </span>
-                    {game.alreadyRanked && (
-                      <span className="shrink-0 rounded-full bg-zinc-200 px-2 py-0.5 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
-                        Ranked
-                      </span>
-                    )}
                   </div>
                   <div className="flex items-center gap-2 text-xs text-zinc-500">
                     {game.releaseYear && <span>{game.releaseYear}</span>}

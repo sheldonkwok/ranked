@@ -137,6 +137,9 @@ type RawIgdbGame = {
 
 const GAME_FIELDS =
   "fields name, cover.image_id, first_release_date, platforms.abbreviation, summary;";
+// Wider than the number of results shown client-side, since already-ranked
+// games are filtered out server-side after this fetch.
+const SEARCH_FETCH_LIMIT = 30;
 
 function normalizeGame(raw: RawIgdbGame): IgdbGame {
   return {
@@ -160,7 +163,7 @@ function escapeApicalypseString(value: string): string {
 
 export async function searchGames(query: string): Promise<IgdbGame[]> {
   const escaped = escapeApicalypseString(query);
-  const body = `search "${escaped}"; ${GAME_FIELDS} where version_parent = null; limit 20;`;
+  const body = `search "${escaped}"; ${GAME_FIELDS} where version_parent = null; limit ${SEARCH_FETCH_LIMIT};`;
   const results = await igdbRequest<RawIgdbGame[]>("games", body);
   return results.map(normalizeGame);
 }

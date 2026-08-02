@@ -32,8 +32,8 @@ context is how you flip themes.
 
 - `/` — ranked list renders, body colors follow the color scheme.
 - `/add` — type 2+ chars in the search box → debounced (300ms) IGDB autocomplete,
-  max 5 results; Enter fires the search immediately. Select a result → tier
-  picker → pairwise comparison flow.
+  max 8 results, already-ranked games excluded; Enter fires the search
+  immediately. Select a result → tier picker → pairwise comparison flow.
 - API directly: `curl 'http://localhost:3000/api/games/search?q=zelda'` works
   under DISABLE_AUTH.
 

@@ -5,6 +5,8 @@ import { requireUser } from "@/lib/session";
 import { searchGames } from "@/lib/igdb";
 import { badRequest, releaseYearOf, withErrorHandling } from "@/app/api/_lib/handler";
 
+const SEARCH_RESULT_LIMIT = 8;
+
 export async function GET(request: NextRequest) {
   return withErrorHandling(async () => {
     const user = await requireUser();
@@ -31,14 +33,16 @@ export async function GET(request: NextRequest) {
     const rankedIgdbIds = new Set(rankedRows.map((row) => row.igdbId));
 
     return NextResponse.json({
-      results: results.map((game) => ({
-        ...game,
-        firstReleaseDate: game.firstReleaseDate
-          ? game.firstReleaseDate.toISOString()
-          : null,
-        releaseYear: releaseYearOf(game.firstReleaseDate),
-        alreadyRanked: rankedIgdbIds.has(game.igdbId),
-      })),
+      results: results
+        .filter((game) => !rankedIgdbIds.has(game.igdbId))
+        .slice(0, SEARCH_RESULT_LIMIT)
+        .map((game) => ({
+          ...game,
+          firstReleaseDate: game.firstReleaseDate
+            ? game.firstReleaseDate.toISOString()
+            : null,
+          releaseYear: releaseYearOf(game.firstReleaseDate),
+        })),
     });
   });
 }
