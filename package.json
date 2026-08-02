@@ -10,7 +10,7 @@
     "lint": "biome check",
     "format": "biome check --write",
     "db:generate": "drizzle-kit generate",
-    "db:migrate:prod": "tsx scripts/migrate.ts",
+    "db:migrate:prod": "tsx --env-file=.env scripts/migrate.ts",
     "db:reset": "rm -rf dev-db",
     "test": "vitest run"
   },
