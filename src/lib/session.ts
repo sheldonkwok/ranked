@@ -20,11 +20,20 @@ const SESSION_DURATION_MS = 1000 * 60 * 60 * 24 * 30; // 30 days
 const SESSION_RENEWAL_THRESHOLD_MS = 1000 * 60 * 60 * 24 * 15; // 15 days
 
 /**
- * Opt-in dev-only auth bypass. Gated on NODE_ENV !== "production" in code
- * (not just convention), so DISABLE_AUTH is inert even if it's accidentally
- * set in a prod environment. See DISABLE_AUTH in .env.example.
+ * Auth bypass — active in two cases:
+ *
+ * 1. Local dev with DISABLE_AUTH=true. Gated on NODE_ENV !== "production" in
+ *    code (not just convention), so DISABLE_AUTH is inert even if it's
+ *    accidentally set in a prod environment. See DISABLE_AUTH in .env.example.
+ * 2. Any Vercel preview deployment. Vercel builds previews with
+ *    NODE_ENV="production", so DISABLE_AUTH can't reach them — instead we key
+ *    off VERCEL_ENV, which Vercel sets to "preview" for preview deployments
+ *    and "production" for the production one. Real prod is therefore never
+ *    bypassed, since VERCEL_ENV === "production" there.
  */
-const AUTH_DISABLED = process.env.NODE_ENV !== "production" && process.env.DISABLE_AUTH === "true";
+const IS_VERCEL_PREVIEW = process.env.VERCEL_ENV === "preview";
+const AUTH_DISABLED =
+  IS_VERCEL_PREVIEW || (process.env.NODE_ENV !== "production" && process.env.DISABLE_AUTH === "true");
 const DEV_USER_TWITCH_ID = "dev-user";
 
 /**

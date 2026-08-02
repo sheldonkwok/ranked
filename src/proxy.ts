@@ -14,8 +14,13 @@ import { NextResponse } from "next/server";
 const SESSION_COOKIE_NAME = "session";
 
 // Keep in sync with AUTH_DISABLED in src/lib/session.ts. Duplicated for the
-// same reason as SESSION_COOKIE_NAME above — see that comment.
-const AUTH_DISABLED = process.env.NODE_ENV !== "production" && process.env.DISABLE_AUTH === "true";
+// same reason as SESSION_COOKIE_NAME above — see that comment. Bypass auth
+// on Vercel preview deployments (VERCEL_ENV === "preview") as well as in
+// local dev (DISABLE_AUTH); real prod is VERCEL_ENV === "production", so it's
+// never bypassed.
+const IS_VERCEL_PREVIEW = process.env.VERCEL_ENV === "preview";
+const AUTH_DISABLED =
+  IS_VERCEL_PREVIEW || (process.env.NODE_ENV !== "production" && process.env.DISABLE_AUTH === "true");
 
 /**
  * Optimistic auth gate: redirects to /sign-in whenever the `session` cookie
