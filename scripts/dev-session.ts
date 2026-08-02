@@ -4,7 +4,7 @@
 //   npx tsx scripts/dev-session.ts
 //   curl -sI http://localhost:3000/ -H "Cookie: $(npx tsx scripts/dev-session.ts)"
 //
-// Intentionally loads no env vars (no dotenv, DATABASE_URL untouched) so it
+// Intentionally loads no env vars (no dotenv, POSTGRES_URL untouched) so it
 // always uses the local PGlite dev DB. PGlite only supports a single
 // process per data directory, so run this with the Next dev server
 // STOPPED, then start `npm run dev` again afterwards.

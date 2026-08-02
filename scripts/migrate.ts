@@ -3,10 +3,10 @@ import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
 
 async function main() {
-  const databaseUrl = process.env.DATABASE_URL;
+  const databaseUrl = process.env.POSTGRES_URL_NON_POOLING ?? process.env.POSTGRES_URL;
 
   if (!databaseUrl) {
-    throw new Error("DATABASE_URL is required to run production migrations");
+    throw new Error("POSTGRES_URL_NON_POOLING or POSTGRES_URL is required to run production migrations");
   }
 
   const client = postgres(databaseUrl, { max: 1, prepare: false });

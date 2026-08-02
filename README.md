@@ -37,14 +37,14 @@ Prerequisites:
 Setup:
 
 ```bash
-cp .env.example .env.local
-# fill in TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET in .env.local
+cp .env.example .env
+# fill in TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET in .env
 
 npm install
 npm run dev
 ```
 
-Leave `DATABASE_URL` unset in `.env.local` for local dev. With it unset,
+Leave `POSTGRES_URL` unset in `.env` for local dev. With it unset,
 the app uses a file-backed PGlite database at `./dev-db`; the first request
 to the dev server creates and migrates it automatically (see `getDb()` in
 `src/db/index.ts`). No separate database setup is needed.
@@ -85,7 +85,7 @@ hand. In production, apply pending migrations explicitly against a **direct**
 (non-pooled) Postgres connection:
 
 ```bash
-DATABASE_URL="<direct-connection-url>" npm run db:migrate:prod
+POSTGRES_URL_NON_POOLING="<direct-connection-url>" npm run db:migrate:prod
 ```
 
 Use Supabase's direct connection string for migrations, not the pooler —
@@ -100,11 +100,13 @@ the pooler doesn't support the session-level behavior migrations need.
    required for pgbouncer-style transaction pooling.
 2. Run migrations against the direct connection:
    ```bash
-   DATABASE_URL="<direct-connection-url>" npm run db:migrate:prod
+   POSTGRES_URL_NON_POOLING="<direct-connection-url>" npm run db:migrate:prod
    ```
 3. Push the repo to GitHub and import it into Vercel.
 4. In the Vercel project's environment variables, set:
-   - `DATABASE_URL` — the Supabase pooler connection string
+   - `POSTGRES_URL` — the Supabase pooler connection string (Vercel's Supabase
+     integration sets this, along with `POSTGRES_URL_NON_POOLING`, automatically
+     if connected)
    - `APP_URL` — `https://<your-app>.vercel.app` (your production domain)
    - `TWITCH_CLIENT_ID`
    - `TWITCH_CLIENT_SECRET`
@@ -139,7 +141,7 @@ src/
     schema.ts                      Drizzle schema (users, sessions, games,
                                     entries)
     index.ts                       getDb(): PGlite (dev) or postgres-js
-                                    (prod, via DATABASE_URL) singleton
+                                    (prod, via POSTGRES_URL) singleton
   lib/
     ranking.ts                     Tier/score/position logic (insert, move,
                                     remove, recompute)
@@ -156,8 +158,9 @@ src/
                                     redirect to /sign-in
 drizzle/                           Generated SQL migrations + metadata
 scripts/
-  migrate.ts                       Runs migrations against DATABASE_URL
-                                    (npm run db:migrate:prod)
+  migrate.ts                       Runs migrations against
+                                    POSTGRES_URL_NON_POOLING (npm run
+                                    db:migrate:prod)
   dev-session.ts                   Mints a dev session cookie for curl/API
                                     testing against the local PGlite DB
 ```

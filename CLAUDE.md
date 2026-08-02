@@ -8,6 +8,10 @@ more?" prompts — a client-side binary search that finds the insertion position
 O(log n) comparisons. Scores (0–10) are derived from position within per-tier bands,
 never entered by hand.
 
+## Rules
+- Never git commit
+
+
 ## Stack
 
 - Next.js 16 (App Router) + React 19 + TypeScript + Tailwind v4
@@ -22,7 +26,7 @@ never entered by hand.
 - `pnpm dev` / `pnpm build` / `pnpm lint` / `pnpm test`
 - `pnpm lint` runs Biome (`biome check`, lint + format check); `pnpm format` applies fixes
 - `pnpm db:generate` — drizzle-kit generate after editing `src/db/schema.ts`
-- `pnpm db:migrate:prod` — apply migrations (needs direct `DATABASE_URL`)
+- `pnpm db:migrate:prod` — apply migrations (needs direct `POSTGRES_URL_NON_POOLING`)
 - `pnpm db:reset` — delete the local PGlite data dir
 
 ## Layout
@@ -78,7 +82,7 @@ never entered by hand.
   while `next dev` is running. Dev DB auto-migrates on first access.
 - Prod runtime uses the Supabase **pooler** (`prepare: false` required); migrations use the
   **direct** connection.
-- Leave `DATABASE_URL` unset locally to get PGlite. Required env: `TWITCH_CLIENT_ID`,
+- Leave `POSTGRES_URL` unset locally to get PGlite. Required env: `TWITCH_CLIENT_ID`,
   `TWITCH_CLIENT_SECRET`, `APP_URL` (see `.env.example`).
 - Set `DISABLE_AUTH=true` locally to skip Twitch auth entirely — every page/API route
   acts as a fixed synthetic dev user (`src/lib/session.ts`). Ignored unless

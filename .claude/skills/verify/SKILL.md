@@ -11,7 +11,7 @@ description: Build/launch/drive recipe for verifying Ranked changes end-to-end i
   **one process** per `./dev-db`, so if a server is already running, drive it —
   don't start a second one or run tsx scripts against the DB.
 - Otherwise: `npm run dev` (background). `.env` already has Twitch/IGDB creds,
-  `DISABLE_AUTH=true`, and unset `DATABASE_URL` (→ PGlite), so all pages/APIs
+  `DISABLE_AUTH=true`, and unset `POSTGRES_URL` (→ PGlite), so all pages/APIs
   work as a synthetic dev user with real IGDB search. App at http://localhost:3000.
 
 ## Drive (headless browser)

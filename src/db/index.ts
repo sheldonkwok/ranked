@@ -32,7 +32,7 @@ declare global {
 }
 
 async function initDb(): Promise<Db> {
-  const databaseUrl = process.env.DATABASE_URL;
+  const databaseUrl = process.env.POSTGRES_URL;
 
   if (databaseUrl) {
     const client = postgres(databaseUrl, { prepare: false });
