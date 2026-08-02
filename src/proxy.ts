@@ -13,6 +13,11 @@ import type { NextRequest } from "next/server";
 // data fetching" note in the docs above).
 const SESSION_COOKIE_NAME = "session";
 
+// Keep in sync with AUTH_DISABLED in src/lib/session.ts. Duplicated for the
+// same reason as SESSION_COOKIE_NAME above — see that comment.
+const AUTH_DISABLED =
+  process.env.NODE_ENV !== "production" && process.env.DISABLE_AUTH === "true";
+
 /**
  * Optimistic auth gate: redirects to /sign-in whenever the `session` cookie
  * is absent. This is a cheap presence check only — it does NOT validate the
@@ -21,6 +26,10 @@ const SESSION_COOKIE_NAME = "session";
  * (src/lib/session.ts), which pages and API routes must still call.
  */
 export function proxy(request: NextRequest): NextResponse {
+  if (AUTH_DISABLED) {
+    return NextResponse.next();
+  }
+
   const hasSessionCookie = request.cookies.has(SESSION_COOKIE_NAME);
 
   if (!hasSessionCookie) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import CoverImage from "@/components/CoverImage";
 
 export type GameSearchResult = {
@@ -22,6 +22,7 @@ type SearchState =
 
 const MIN_QUERY_LENGTH = 2;
 const DEBOUNCE_MS = 300;
+const MAX_RESULTS = 5;
 
 export default function GameSearch({
   onSelectAction,
@@ -31,8 +32,49 @@ export default function GameSearch({
   const [query, setQuery] = useState("");
   const [state, setState] = useState<SearchState>({ kind: "idle" });
   const requestIdRef = useRef(0);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const trimmedQuery = query.trim();
+
+  const runSearch = useCallback(async (trimmed: string) => {
+    const requestId = ++requestIdRef.current;
+    setState({ kind: "loading" });
+
+    try {
+      const res = await fetch(
+        `/api/games/search?q=${encodeURIComponent(trimmed)}`
+      );
+
+      if (requestId !== requestIdRef.current) return;
+
+      if (res.status === 502) {
+        setState({
+          kind: "error",
+          message:
+            "Game search is unavailable (IGDB credentials not configured).",
+        });
+        return;
+      }
+
+      if (!res.ok) {
+        setState({
+          kind: "error",
+          message: "Something went wrong searching for games. Try again.",
+        });
+        return;
+      }
+
+      const data = (await res.json()) as { results: GameSearchResult[] };
+      if (requestId !== requestIdRef.current) return;
+      setState({ kind: "results", results: data.results });
+    } catch {
+      if (requestId !== requestIdRef.current) return;
+      setState({
+        kind: "error",
+        message: "Something went wrong searching for games. Try again.",
+      });
+    }
+  }, []);
 
   useEffect(() => {
     const trimmed = query.trim();
@@ -44,59 +86,48 @@ export default function GameSearch({
       return;
     }
 
-    const requestId = ++requestIdRef.current;
-    const timer = setTimeout(async () => {
-      setState({ kind: "loading" });
-
-      try {
-        const res = await fetch(
-          `/api/games/search?q=${encodeURIComponent(trimmed)}`
-        );
-
-        if (requestId !== requestIdRef.current) return;
-
-        if (res.status === 502) {
-          setState({
-            kind: "error",
-            message:
-              "Game search is unavailable (IGDB credentials not configured).",
-          });
-          return;
-        }
-
-        if (!res.ok) {
-          setState({
-            kind: "error",
-            message: "Something went wrong searching for games. Try again.",
-          });
-          return;
-        }
-
-        const data = (await res.json()) as { results: GameSearchResult[] };
-        if (requestId !== requestIdRef.current) return;
-        setState({ kind: "results", results: data.results });
-      } catch {
-        if (requestId !== requestIdRef.current) return;
-        setState({
-          kind: "error",
-          message: "Something went wrong searching for games. Try again.",
-        });
-      }
+    // Hold the timer in a local so the cleanup cancels *this* effect's timer
+    // rather than whatever happens to be in the ref by then. The ref exists
+    // only so `handleSubmit` can cancel a still-pending debounce.
+    const timer = setTimeout(() => {
+      debounceRef.current = null;
+      runSearch(trimmed);
     }, DEBOUNCE_MS);
+    debounceRef.current = timer;
 
-    return () => clearTimeout(timer);
-  }, [query]);
+    return () => {
+      clearTimeout(timer);
+      if (debounceRef.current === timer) {
+        debounceRef.current = null;
+      }
+    };
+  }, [query, runSearch]);
+
+  const handleSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (trimmedQuery.length < MIN_QUERY_LENGTH) return;
+    if (debounceRef.current !== null) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
+    runSearch(trimmedQuery);
+  };
 
   return (
     <div className="flex flex-col gap-4">
-      <input
-        type="text"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search for a game…"
-        autoFocus
-        className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-zinc-500"
-      />
+      <form onSubmit={handleSubmit} className="flex flex-col gap-1.5">
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search for a game…"
+          autoFocus
+          className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-500"
+        />
+        <p className="text-xs text-zinc-500">
+          Results appear as you type — press Enter to search now.
+        </p>
+      </form>
 
       {trimmedQuery.length > 0 && trimmedQuery.length < MIN_QUERY_LENGTH && (
         <p className="text-sm text-zinc-500">
@@ -135,7 +166,7 @@ export default function GameSearch({
         state.kind === "results" &&
         state.results.length > 0 && (
         <ul className="flex flex-col divide-y divide-zinc-200 dark:divide-zinc-800">
-          {state.results.map((game) => (
+          {state.results.slice(0, MAX_RESULTS).map((game) => (
             <li key={game.igdbId}>
               <button
                 type="button"

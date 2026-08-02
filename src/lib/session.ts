@@ -20,6 +20,37 @@ const SESSION_DURATION_MS = 1000 * 60 * 60 * 24 * 30; // 30 days
 const SESSION_RENEWAL_THRESHOLD_MS = 1000 * 60 * 60 * 24 * 15; // 15 days
 
 /**
+ * Opt-in dev-only auth bypass. Gated on NODE_ENV !== "production" in code
+ * (not just convention), so DISABLE_AUTH is inert even if it's accidentally
+ * set in a prod environment. See DISABLE_AUTH in .env.example.
+ */
+const AUTH_DISABLED =
+  process.env.NODE_ENV !== "production" && process.env.DISABLE_AUTH === "true";
+const DEV_USER_TWITCH_ID = "dev-user";
+
+/**
+ * Upserts a fixed synthetic "dev" user, used in place of real auth when
+ * AUTH_DISABLED. Mirrors the upsert in scripts/dev-session.ts.
+ */
+async function getOrCreateDevUser(): Promise<User> {
+  const db = await getDb();
+  const [user] = await db
+    .insert(users)
+    .values({
+      twitchId: DEV_USER_TWITCH_ID,
+      username: "dev",
+      displayName: "Dev User",
+      avatarUrl: null,
+    })
+    .onConflictDoUpdate({
+      target: users.twitchId,
+      set: { username: "dev" },
+    })
+    .returning();
+  return user;
+}
+
+/**
  * Generates a fresh, cryptographically random session token to hand to the
  * client (as the cookie value). Never stored server-side directly — see
  * `hashToken`.
@@ -159,8 +190,15 @@ async function getSessionTokenFromCookie(): Promise<string | null> {
  * on a subsequent request that *can* set cookies (e.g. the next
  * navigation's route handler, or middleware/proxy re-issuing it isn't
  * needed since presence-only checks don't care about the exact expiry).
+ *
+ * When AUTH_DISABLED, short-circuits to a fixed synthetic dev user — no
+ * cookie, no DB session row, no Twitch calls involved.
  */
 export const getCurrentUser = cache(async (): Promise<User | null> => {
+  if (AUTH_DISABLED) {
+    return getOrCreateDevUser();
+  }
+
   const token = await getSessionTokenFromCookie();
   if (!token) return null;
 
