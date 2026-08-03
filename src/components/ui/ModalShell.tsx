@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 // Shared overlay + panel chrome for ComparisonModal and EntryDialog — was
 // previously duplicated near-verbatim between the two. `onClose` is optional
@@ -16,14 +16,28 @@ export default function ModalShell({
   closeDisabled?: boolean;
   children: React.ReactNode;
 }) {
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // `aria-modal` tells assistive tech the rest of the page is hidden, so focus
+  // has to actually move inside the panel — otherwise the trigger a user is
+  // still focused on is one the screen reader now claims doesn't exist. Restore
+  // focus on unmount so closing a dialog from row 30 doesn't dump the user back
+  // at the top of the list.
+  useEffect(() => {
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    panelRef.current?.focus();
+    return () => previouslyFocused?.focus();
+  }, []);
+
   // Escape closes the modal, same guards as the X button below: a no-op
   // when there's nothing to close to (add-flow's ComparisonModal) or while
   // a save/remove is in flight.
   useEffect(() => {
     if (!onCloseAction || closeDisabled) return;
+    const close = onCloseAction;
 
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") onCloseAction?.();
+      if (e.key === "Escape") close();
     }
 
     document.addEventListener("keydown", handleKeyDown);
@@ -32,14 +46,21 @@ export default function ModalShell({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-bg/80 p-4 backdrop-blur-[2px]">
-      <div role="dialog" aria-modal="true" className="pixel-panel relative flex w-full max-w-lg flex-col gap-6 p-6">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        tabIndex={-1}
+        className="pixel-panel relative flex w-full max-w-lg flex-col gap-6 p-6 outline-none"
+      >
         {onCloseAction && (
           <button
             type="button"
             onClick={onCloseAction}
             disabled={closeDisabled}
             aria-label="Close"
-            title={closeDisabled ? "Saving…" : "Close"}
+            // `closeDisabled` covers both saving and removing, so stay generic.
+            title={closeDisabled ? "Busy…" : "Close"}
             className="pixel-btn-ghost absolute top-3 right-3 px-2 py-1 text-[13px]"
           >
             X

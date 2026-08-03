@@ -31,7 +31,7 @@ export default async function Home({ searchParams }: HomePageProps) {
 
   if (entries.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-5 py-16 text-center">
+      <div className="flex flex-col items-center py-16 text-center">
         <div className="pixel-panel px-12 py-10 text-[14px] tracking-[1px] text-ink-faint">NO GAMES RANKED YET</div>
         {toast && <Toast message={toast} />}
       </div>
@@ -39,9 +39,9 @@ export default async function Home({ searchParams }: HomePageProps) {
   }
 
   return (
-    <div>
+    <>
       <RankedList entries={entries} />
       {toast && <Toast message={toast} />}
-    </div>
+    </>
   );
 }

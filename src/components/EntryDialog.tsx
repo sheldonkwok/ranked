@@ -52,8 +52,14 @@ export default function EntryDialog({
     setCandidates(null);
     setTierError(null);
     setFailure(null);
+    setRemoveError(null);
     submittedForRef.current = null;
     setPhase("tier");
+  }
+
+  function askToRemove() {
+    setRemoveError(null);
+    setPhase("confirm-remove");
   }
 
   async function handlePickTier(pickedTier: Tier) {
@@ -194,12 +200,8 @@ export default function EntryDialog({
         <div className="flex flex-col gap-4">
           {tierError && <Banner variant="error">{tierError}</Banner>}
           <TierPicker onPick={handlePickTier} />
-          <div className="flex flex-col gap-2 border-t border-edge/45 pt-4">
-            <button
-              type="button"
-              onClick={() => setPhase("confirm-remove")}
-              className="pixel-btn-outline pixel-btn-outline-danger"
-            >
+          <div className="border-t border-edge/45 pt-4">
+            <button type="button" onClick={askToRemove} className="pixel-btn-outline">
               REMOVE
             </button>
           </div>
@@ -219,7 +221,7 @@ export default function EntryDialog({
           <p className="text-sm text-ink">REMOVE {game.name.toUpperCase()} FROM YOUR LIST?</p>
           {removeError && <Banner variant="error">{removeError}</Banner>}
           <div className="flex items-center gap-4">
-            <button type="button" onClick={handleRemove} className="pixel-btn-outline pixel-btn-outline-danger">
+            <button type="button" onClick={handleRemove} className="pixel-btn-outline">
               YES, REMOVE
             </button>
             <button type="button" onClick={() => setPhase("tier")} className="pixel-btn-ghost">

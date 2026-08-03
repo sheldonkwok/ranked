@@ -171,7 +171,7 @@
     transform: translateY(2px);
   }
 
-  /* Small inline text-style action (EDIT / SIGN OUT / modal chrome). */
+  /* Small inline text-style action (SIGN OUT / modal chrome). */
   .pixel-btn-ghost {
     font-family: var(--font-sans);
     font-size: 11px;
@@ -204,8 +204,24 @@
      with its own chamfer. At rest both are the tier color so the ring is
      invisible; on hover only the face flips, revealing a 2px outline that
      follows the chamfer (a real border/outline would be sliced off at the
-     diagonals by clip-path, since clip-path clips the whole border-box). */
+     diagonals by clip-path, since clip-path clips the whole border-box).
+     Both layers share one chamfer shape; each sets its own `--chamfer` so the
+     face's corners sit 1px inside the outer element's. */
+  .score-chip,
+  .score-chip-face {
+    clip-path: polygon(
+      var(--chamfer) 0,
+      calc(100% - var(--chamfer)) 0,
+      100% var(--chamfer),
+      100% calc(100% - var(--chamfer)),
+      calc(100% - var(--chamfer)) 100%,
+      var(--chamfer) 100%,
+      0 calc(100% - var(--chamfer)),
+      0 var(--chamfer)
+    );
+  }
   .score-chip {
+    --chamfer: 5px;
     --score-chip-bg: #6ee787;
     --score-chip-fg: #07160d;
     --score-chip-shade: #2f8b52;
@@ -217,18 +233,10 @@
     background: var(--score-chip-bg);
     cursor: pointer;
     filter: drop-shadow(0 3px 0 var(--score-chip-shade));
-    clip-path: polygon(
-      5px 0,
-      calc(100% - 5px) 0,
-      100% 5px,
-      100% calc(100% - 5px),
-      calc(100% - 5px) 100%,
-      5px 100%,
-      0 calc(100% - 5px),
-      0 5px
-    );
   }
   .score-chip-face {
+    --chamfer: 4px;
+
     display: block;
     font-family: var(--font-pixel);
     font-size: 26px;
@@ -238,18 +246,8 @@
     text-align: center;
     background: var(--score-chip-bg);
     color: var(--score-chip-fg);
-    clip-path: polygon(
-      4px 0,
-      calc(100% - 4px) 0,
-      100% 4px,
-      100% calc(100% - 4px),
-      calc(100% - 4px) 100%,
-      4px 100%,
-      0 calc(100% - 4px),
-      0 4px
-    );
     transition:
-      background 0.1s ease,
+      background-color 0.1s ease,
       color 0.1s ease;
   }
   .score-chip:hover .score-chip-face,
@@ -282,7 +280,8 @@
     --score-chip-shade: #2a3145;
   }
 
-  /* Transparent 2px-outline action — used by EntryDialog's destructive buttons. */
+  /* Transparent 2px-outline action — EntryDialog's destructive buttons, which
+     sit muted until hover reveals the danger tint. */
   .pixel-btn-outline {
     font-family: var(--font-pixel);
     font-size: 18px;
@@ -291,28 +290,16 @@
     white-space: nowrap;
     padding: 3px 10px;
     background: transparent;
-    color: #8be0a6;
-    border: 2px solid #2c5b3c;
+    color: #8d9ac8;
+    border: 2px solid #333b5e;
     cursor: pointer;
     transition:
       color 0.1s ease,
       border-color 0.1s ease;
   }
   .pixel-btn-outline:hover {
-    color: #d6ffe4;
-    border-color: #6ee787;
-  }
-  .pixel-btn-outline-danger {
-    color: #8d9ac8;
-    border-color: #333b5e;
-  }
-  .pixel-btn-outline-danger:hover {
     color: #ffb4c0;
     border-color: #8a3a4d;
-  }
-  .pixel-btn-outline:disabled {
-    cursor: not-allowed;
-    opacity: 0.5;
   }
 
   /* Large tier-picker buttons. */
