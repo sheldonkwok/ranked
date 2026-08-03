@@ -199,24 +199,23 @@
     opacity: 0.5;
   }
 
-  /* Retro pixel score chip: chamfered corners + hard offset shade. One
-     fill/ink/shade triple per tier, since the chip is the row's only tier signal. */
+  /* Retro pixel score chip, doubling as the row's edit trigger. Two layers:
+     the outer element is the outline color, the inner face is the fill, each
+     with its own chamfer. At rest both are the tier color so the ring is
+     invisible; on hover only the face flips, revealing a 2px outline that
+     follows the chamfer (a real border/outline would be sliced off at the
+     diagonals by clip-path, since clip-path clips the whole border-box). */
   .score-chip {
     --score-chip-bg: #6ee787;
     --score-chip-fg: #07160d;
     --score-chip-shade: #2f8b52;
 
     display: inline-block;
-    font-family: var(--font-pixel);
-    font-size: 26px;
-    line-height: 1;
     min-width: 66px;
-    padding: 4px 12px 3px;
-    text-align: center;
+    padding: 2px;
+    border: 0;
     background: var(--score-chip-bg);
-    color: var(--score-chip-fg);
-    /* clip-path clips box-shadow too, so the hard offset shade has to be a
-       drop-shadow filter (applied after clipping) instead. */
+    cursor: pointer;
     filter: drop-shadow(0 3px 0 var(--score-chip-shade));
     clip-path: polygon(
       5px 0,
@@ -229,6 +228,42 @@
       0 5px
     );
   }
+  .score-chip-face {
+    display: block;
+    font-family: var(--font-pixel);
+    font-size: 26px;
+    line-height: 1;
+    /* 2px of outer padding + this = the original 4px 12px 3px chip metrics. */
+    padding: 2px 10px 1px;
+    text-align: center;
+    background: var(--score-chip-bg);
+    color: var(--score-chip-fg);
+    clip-path: polygon(
+      4px 0,
+      calc(100% - 4px) 0,
+      100% 4px,
+      100% calc(100% - 4px),
+      calc(100% - 4px) 100%,
+      4px 100%,
+      0 calc(100% - 4px),
+      0 4px
+    );
+    transition:
+      background 0.1s ease,
+      color 0.1s ease;
+  }
+  .score-chip:hover .score-chip-face,
+  .score-chip:focus-visible .score-chip-face {
+    background: var(--score-chip-fg);
+    color: var(--score-chip-bg);
+  }
+  .score-chip:focus-visible {
+    outline: none; /* the inversion is the focus indicator */
+  }
+  .score-chip:active {
+    transform: translateY(2px);
+    filter: drop-shadow(0 1px 0 var(--score-chip-shade));
+  }
   .score-chip-fine {
     --score-chip-bg: #efc85c;
     --score-chip-fg: #170f03;
@@ -239,8 +274,15 @@
     --score-chip-fg: #17060a;
     --score-chip-shade: #8b3345;
   }
+  /* Scores are hidden until SCORE_UNLOCK_THRESHOLD entries — the chip still
+     renders (and still opens the dialog) so early entries stay editable. */
+  .score-chip-locked {
+    --score-chip-bg: #4a5570;
+    --score-chip-fg: #0a0e18;
+    --score-chip-shade: #2a3145;
+  }
 
-  /* Transparent 2px-outline action, paired with .score-chip on a ranked row. */
+  /* Transparent 2px-outline action — used by EntryDialog's destructive buttons. */
   .pixel-btn-outline {
     font-family: var(--font-pixel);
     font-size: 18px;

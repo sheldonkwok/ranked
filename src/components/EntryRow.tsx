@@ -1,6 +1,5 @@
 import CoverImage from "@/components/CoverImage";
-import EntryActions from "@/components/EntryActions";
-import ScoreBadge from "@/components/ScoreBadge";
+import ScoreButton from "@/components/ScoreButton";
 import type { Tier } from "@/db/schema";
 
 export type EntryRowProps = {
@@ -41,9 +40,8 @@ export default function EntryRow({ id, rank, name, coverImageId, releaseYear, sc
         {releaseYear !== null && <p className="text-[12px] tracking-[1px] text-ink-dim">{releaseYear}</p>}
       </div>
 
-      <div className="entry-meta flex items-center gap-[18px]">
-        <ScoreBadge score={score} tier={tier} />
-        <EntryActions entryId={id} game={{ name, coverImageId, releaseYear }} tier={tier} />
+      <div className="entry-meta flex items-center">
+        <ScoreButton entryId={id} game={{ name, coverImageId, releaseYear }} tier={tier} score={score} />
       </div>
     </li>
   );
