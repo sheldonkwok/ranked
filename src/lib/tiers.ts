@@ -1,6 +1,6 @@
 import type { Tier } from "@/db/schema";
 
-/** Shared display copy for each tier — used by TierPicker, AddFlow, and RerankDialog. */
+/** Shared display copy for each tier — used by TierPicker, AddFlow, and EntryDialog. */
 export const TIER_LABEL: Record<Tier, string> = {
   liked: "Liked it",
   fine: "It was fine",

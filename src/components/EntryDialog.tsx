@@ -11,24 +11,23 @@ import type { Tier } from "@/db/schema";
 import { type ComparisonCandidate, useComparisonRanking } from "@/hooks/useComparisonRanking";
 import { TIER_LABEL } from "@/lib/tiers";
 
-type Phase = "tier" | "loading-candidates" | "comparing" | "submitting" | "failed";
-
+type Phase = "tier" | "loading-candidates" | "comparing" | "submitting" | "confirm-remove" | "removing" | "failed";
 type FailureKind = "not_found" | "generic";
 
-export type RerankGame = {
+export type EntryDialogGame = {
   name: string;
   coverImageId: string | null;
   releaseYear: number | null;
 };
 
-export default function RerankDialog({
+export default function EntryDialog({
   entryId,
   game,
   currentTier,
   onCloseAction,
 }: {
   entryId: number;
-  game: RerankGame;
+  game: EntryDialogGame;
   currentTier: Tier;
   onCloseAction: () => void;
 }) {
@@ -39,6 +38,7 @@ export default function RerankDialog({
   const [candidates, setCandidates] = useState<ComparisonCandidate[] | null>(null);
   const [tierError, setTierError] = useState<string | null>(null);
   const [failure, setFailure] = useState<FailureKind | null>(null);
+  const [removeError, setRemoveError] = useState<string | null>(null);
 
   const comparison = useComparisonRanking(candidates);
 
@@ -112,6 +112,36 @@ export default function RerankDialog({
     }
   }
 
+  async function handleRemove() {
+    setRemoveError(null);
+    setPhase("removing");
+
+    try {
+      const res = await fetch(`/api/entries/${entryId}`, {
+        method: "DELETE",
+      });
+
+      if (res.ok) {
+        router.refresh();
+        // Leave phase as "removing" — the row disappears once the refreshed
+        // server data lands, so there's no stale phase to reset to.
+        return;
+      }
+
+      if (res.status === 404) {
+        setFailure("not_found");
+        setPhase("failed");
+        return;
+      }
+
+      setRemoveError("Couldn't remove. Try again.");
+      setPhase("confirm-remove");
+    } catch {
+      setRemoveError("Couldn't remove. Try again.");
+      setPhase("confirm-remove");
+    }
+  }
+
   // Auto-submit once the comparison loop lands on a final position
   // (including the empty-tier case, where the hook completes immediately
   // with zero comparisons).
@@ -154,9 +184,9 @@ export default function RerankDialog({
   }
 
   return (
-    <ModalShell onCloseAction={onCloseAction} closeDisabled={phase === "submitting"}>
+    <ModalShell onCloseAction={onCloseAction} closeDisabled={phase === "submitting" || phase === "removing"}>
       <div className="flex flex-col gap-1">
-        <h2 className="pixel-heading text-[13px]">RE-RANK {game.name.toUpperCase()}</h2>
+        <h2 className="pixel-heading text-[13px]">EDIT {game.name.toUpperCase()}</h2>
         <p className="text-xs tracking-[1px] text-ink-dim">CURRENTLY: {TIER_LABEL[currentTier].toUpperCase()}</p>
       </div>
 
@@ -164,6 +194,15 @@ export default function RerankDialog({
         <div className="flex flex-col gap-4">
           {tierError && <Banner variant="error">{tierError}</Banner>}
           <TierPicker onPick={handlePickTier} />
+          <div className="flex flex-col gap-2 border-t border-edge/45 pt-4">
+            <button
+              type="button"
+              onClick={() => setPhase("confirm-remove")}
+              className="pixel-btn-ghost pixel-btn-ghost-danger"
+            >
+              REMOVE
+            </button>
+          </div>
         </div>
       )}
 
@@ -175,14 +214,34 @@ export default function RerankDialog({
         <PixelLoader className="py-4" label="Saving…" />
       )}
 
+      {phase === "confirm-remove" && (
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-ink">REMOVE {game.name.toUpperCase()} FROM YOUR LIST?</p>
+          {removeError && <Banner variant="error">{removeError}</Banner>}
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={handleRemove}
+              className="pixel-btn-ghost pixel-btn-ghost-danger border-danger/50 text-danger-ink"
+            >
+              YES, REMOVE
+            </button>
+            <button type="button" onClick={() => setPhase("tier")} className="pixel-btn-ghost">
+              CANCEL
+            </button>
+          </div>
+        </div>
+      )}
+
+      {phase === "removing" && <PixelLoader className="py-4" label="Removing…" />}
+
       {phase === "failed" && (
         <div className="flex flex-col gap-4">
           {failure === "not_found" && (
             <Banner variant="warn">This entry no longer exists — it may have been removed.</Banner>
           )}
-
           {failure === "generic" && (
-            <Banner variant="error">Something went wrong saving this re-rank. Try again.</Banner>
+            <Banner variant="error">Something went wrong saving this change. Try again.</Banner>
           )}
 
           <div className="flex items-center gap-4">

@@ -25,6 +25,10 @@ export const SCORE_UNLOCK_THRESHOLD = 10;
 
 /** Whether a user with `entryCount` total ranked entries should see numeric scores. */
 export function scoresUnlocked(entryCount: number): boolean {
+  // Skip the threshold under `next dev` so scores are visible without ranking 10 games first.
+  // Checked against "development" specifically (not the broader `!== "production"`) so this
+  // doesn't also flip on under `vitest`, which sets NODE_ENV="test".
+  if (process.env.NODE_ENV === "development") return true;
   return entryCount >= SCORE_UNLOCK_THRESHOLD;
 }
 
