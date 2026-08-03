@@ -171,7 +171,7 @@
     transform: translateY(2px);
   }
 
-  /* Small inline text-style action (RE-RANK / DEL / SIGN OUT). */
+  /* Small inline text-style action (EDIT / SIGN OUT / modal chrome). */
   .pixel-btn-ghost {
     font-family: var(--font-sans);
     font-size: 11px;
@@ -195,6 +195,80 @@
     border-color: var(--color-danger);
   }
   .pixel-btn-ghost:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  /* Retro pixel score chip: chamfered corners + hard offset shade. One
+     fill/ink/shade triple per tier, since the chip is the row's only tier signal. */
+  .score-chip {
+    --score-chip-bg: #6ee787;
+    --score-chip-fg: #07160d;
+    --score-chip-shade: #2f8b52;
+
+    display: inline-block;
+    font-family: var(--font-pixel);
+    font-size: 26px;
+    line-height: 1;
+    min-width: 66px;
+    padding: 4px 12px 3px;
+    text-align: center;
+    background: var(--score-chip-bg);
+    color: var(--score-chip-fg);
+    /* clip-path clips box-shadow too, so the hard offset shade has to be a
+       drop-shadow filter (applied after clipping) instead. */
+    filter: drop-shadow(0 3px 0 var(--score-chip-shade));
+    clip-path: polygon(
+      5px 0,
+      calc(100% - 5px) 0,
+      100% 5px,
+      100% calc(100% - 5px),
+      calc(100% - 5px) 100%,
+      5px 100%,
+      0 calc(100% - 5px),
+      0 5px
+    );
+  }
+  .score-chip-fine {
+    --score-chip-bg: #efc85c;
+    --score-chip-fg: #170f03;
+    --score-chip-shade: #8b6b2f;
+  }
+  .score-chip-disliked {
+    --score-chip-bg: #f0889b;
+    --score-chip-fg: #17060a;
+    --score-chip-shade: #8b3345;
+  }
+
+  /* Transparent 2px-outline action, paired with .score-chip on a ranked row. */
+  .pixel-btn-outline {
+    font-family: var(--font-pixel);
+    font-size: 18px;
+    line-height: 1;
+    letter-spacing: 1px;
+    white-space: nowrap;
+    padding: 3px 10px;
+    background: transparent;
+    color: #8be0a6;
+    border: 2px solid #2c5b3c;
+    cursor: pointer;
+    transition:
+      color 0.1s ease,
+      border-color 0.1s ease;
+  }
+  .pixel-btn-outline:hover {
+    color: #d6ffe4;
+    border-color: #6ee787;
+  }
+  .pixel-btn-outline-danger {
+    color: #8d9ac8;
+    border-color: #333b5e;
+  }
+  .pixel-btn-outline-danger:hover {
+    color: #ffb4c0;
+    border-color: #8a3a4d;
+  }
+  .pixel-btn-outline:disabled {
     cursor: not-allowed;
     opacity: 0.5;
   }

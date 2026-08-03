@@ -8,8 +8,8 @@ export default function EntryActions({ entryId, game, tier }: { entryId: number;
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="flex shrink-0 items-center gap-2">
-      <button type="button" onClick={() => setOpen(true)} className="pixel-btn-ghost">
+    <div className="flex shrink-0 items-center gap-1.5">
+      <button type="button" onClick={() => setOpen(true)} className="pixel-btn-outline">
         EDIT
       </button>
 

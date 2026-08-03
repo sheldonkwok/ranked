@@ -198,7 +198,7 @@ export default function EntryDialog({
             <button
               type="button"
               onClick={() => setPhase("confirm-remove")}
-              className="pixel-btn-ghost pixel-btn-ghost-danger"
+              className="pixel-btn-outline pixel-btn-outline-danger"
             >
               REMOVE
             </button>
@@ -219,11 +219,7 @@ export default function EntryDialog({
           <p className="text-sm text-ink">REMOVE {game.name.toUpperCase()} FROM YOUR LIST?</p>
           {removeError && <Banner variant="error">{removeError}</Banner>}
           <div className="flex items-center gap-4">
-            <button
-              type="button"
-              onClick={handleRemove}
-              className="pixel-btn-ghost pixel-btn-ghost-danger border-danger/50 text-danger-ink"
-            >
+            <button type="button" onClick={handleRemove} className="pixel-btn-outline pixel-btn-outline-danger">
               YES, REMOVE
             </button>
             <button type="button" onClick={() => setPhase("tier")} className="pixel-btn-ghost">

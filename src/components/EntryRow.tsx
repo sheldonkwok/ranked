@@ -15,7 +15,7 @@ export type EntryRowProps = {
 
 export default function EntryRow({ id, rank, name, coverImageId, releaseYear, score, tier }: EntryRowProps) {
   return (
-    <li className="entry-row-grid pixel-row items-center p-[12px_14px]">
+    <li className="entry-row-grid pixel-row items-center p-[12px_18px]">
       <span
         className="entry-rank font-pixel text-center text-[14px] text-gold-bright"
         style={{ textShadow: "0 2px 3px rgba(0,0,0,0.9)" }}
@@ -41,7 +41,7 @@ export default function EntryRow({ id, rank, name, coverImageId, releaseYear, sc
         {releaseYear !== null && <p className="text-[12px] tracking-[1px] text-ink-dim">{releaseYear}</p>}
       </div>
 
-      <div className="entry-meta flex items-center gap-3">
+      <div className="entry-meta flex items-center gap-[18px]">
         <ScoreBadge score={score} tier={tier} />
         <EntryActions entryId={id} game={{ name, coverImageId, releaseYear }} tier={tier} />
       </div>
