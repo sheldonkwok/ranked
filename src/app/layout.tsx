@@ -76,27 +76,32 @@ export default async function RootLayout({
               <Link href="/" className="flex items-center gap-3.5">
                 <ChaliceLogo />
                 <span
-                  className="pixel-heading ml-1.5 text-[13px] tracking-[1px]"
+                  className="pixel-heading ml-1.5 text-[20px] tracking-[1px]"
                   style={{ textShadow: "0 2px 4px rgba(0,0,0,0.9)" }}
                 >
                   RANKED
                 </span>
               </Link>
               {user && (
-                <Link href="/settings" className="flex items-center gap-2.5">
-                  {user.avatarUrl ? (
-                    <Image
-                      src={user.avatarUrl}
-                      alt={user.displayName ?? user.username}
-                      width={24}
-                      height={24}
-                      className="border border-edge/60"
-                    />
-                  ) : (
-                    <div className="cover-hatch h-6 w-6 border border-edge/60" />
-                  )}
-                  <span className="text-[13px] text-ink-muted">{user.username}</span>
-                </Link>
+                <div className="flex items-center gap-5">
+                  <Link href="/add" className="pixel-btn-gold py-0.5">
+                    RANK
+                  </Link>
+                  <Link href="/settings" className="flex items-center gap-2.5">
+                    {user.avatarUrl ? (
+                      <Image
+                        src={user.avatarUrl}
+                        alt={user.displayName ?? user.username}
+                        width={24}
+                        height={24}
+                        className="border border-edge/60"
+                      />
+                    ) : (
+                      <div className="cover-hatch h-6 w-6 border border-edge/60" />
+                    )}
+                    <span className="text-[13px] text-ink-muted">{user.username}</span>
+                  </Link>
+                </div>
               )}
             </div>
           </header>

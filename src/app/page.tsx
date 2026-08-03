@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import RankedList from "@/components/RankedList";
 import Toast from "@/components/Toast";
@@ -34,9 +33,6 @@ export default async function Home({ searchParams }: HomePageProps) {
     return (
       <div className="flex flex-col items-center gap-5 py-16 text-center">
         <div className="pixel-panel px-12 py-10 text-[14px] tracking-[1px] text-ink-faint">NO GAMES RANKED YET</div>
-        <Link href="/add" className="pixel-btn-gold">
-          RANK A GAME
-        </Link>
         {toast && <Toast message={toast} />}
       </div>
     );
@@ -44,17 +40,6 @@ export default async function Home({ searchParams }: HomePageProps) {
 
   return (
     <div>
-      <div className="mb-[22px] flex items-end justify-between gap-5">
-        <div>
-          <h1 className="pixel-heading mb-3 text-[22px]">MY RANKED GAMES</h1>
-          <p className="pixel-text-shadow text-[13px] tracking-[1px] text-ink">
-            {entries.length} {entries.length === 1 ? "GAME" : "GAMES"} &nbsp;·&nbsp; BEST TO WORST
-          </p>
-        </div>
-        <Link href="/add" className="pixel-btn-gold">
-          RANK A GAME
-        </Link>
-      </div>
       <RankedList entries={entries} />
       {toast && <Toast message={toast} />}
     </div>
