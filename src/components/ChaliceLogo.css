@@ -1,0 +1,109 @@
+/* Header brand mark. Frame cycle for ChaliceLogo — ten 10% slots over 1.1s reproduce
+   the hand-picked order [0,1,3,0,2,1,0,3,2,1], which reads as breathing flicker
+   rather than a mechanical loop. All four groups share a duration so they stay in
+   sync; step-end holds each frame's visibility until the next boundary. */
+.chalice-flame {
+  visibility: hidden;
+  animation-duration: 1.1s;
+  animation-timing-function: step-end;
+  animation-iteration-count: infinite;
+}
+.chalice-flame-0 {
+  animation-name: chalice-flame-0;
+}
+.chalice-flame-1 {
+  animation-name: chalice-flame-1;
+}
+.chalice-flame-2 {
+  animation-name: chalice-flame-2;
+}
+.chalice-flame-3 {
+  animation-name: chalice-flame-3;
+}
+
+@keyframes chalice-flame-0 {
+  0% {
+    visibility: visible;
+  }
+  10% {
+    visibility: hidden;
+  }
+  30% {
+    visibility: visible;
+  }
+  40% {
+    visibility: hidden;
+  }
+  60% {
+    visibility: visible;
+  }
+  70% {
+    visibility: hidden;
+  }
+}
+
+@keyframes chalice-flame-1 {
+  0% {
+    visibility: hidden;
+  }
+  10% {
+    visibility: visible;
+  }
+  20% {
+    visibility: hidden;
+  }
+  50% {
+    visibility: visible;
+  }
+  60% {
+    visibility: hidden;
+  }
+  90% {
+    visibility: visible;
+  }
+}
+
+@keyframes chalice-flame-2 {
+  0% {
+    visibility: hidden;
+  }
+  40% {
+    visibility: visible;
+  }
+  50% {
+    visibility: hidden;
+  }
+  80% {
+    visibility: visible;
+  }
+  90% {
+    visibility: hidden;
+  }
+}
+
+@keyframes chalice-flame-3 {
+  0% {
+    visibility: hidden;
+  }
+  20% {
+    visibility: visible;
+  }
+  30% {
+    visibility: hidden;
+  }
+  70% {
+    visibility: visible;
+  }
+  80% {
+    visibility: hidden;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chalice-flame {
+    animation: none;
+  }
+  .chalice-flame-0 {
+    visibility: visible; /* frame 0 = the neutral pose */
+  }
+}

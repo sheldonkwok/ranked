@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { VT323 } from "next/font/google";
 import Image from "next/image";
 import Link from "next/link";
+import ChaliceLogo from "@/components/ChaliceLogo";
 import { getCurrentUser } from "@/lib/session";
 import "./globals.css";
 
@@ -21,6 +22,16 @@ export const metadata: Metadata = {
     title: "Ranked",
     description: "Rank the video games you've played, Beli-style.",
     type: "website",
+  },
+  icons: {
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/favicon-16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-48.png", sizes: "48x48", type: "image/png" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: "/apple-touch-icon.png",
   },
 };
 
@@ -63,13 +74,7 @@ export default async function RootLayout({
           >
             <div className="mx-auto flex max-w-[980px] items-center justify-between gap-6 px-6 py-4">
               <Link href="/" className="flex items-center gap-3.5">
-                <div
-                  className="h-4 w-4 bg-ink"
-                  style={{
-                    boxShadow:
-                      "5px 0 0 var(--color-blue-bright), 0 5px 0 var(--color-gold), 5px 5px 0 var(--color-blue)",
-                  }}
-                />
+                <ChaliceLogo />
                 <span
                   className="pixel-heading ml-1.5 text-[13px] tracking-[1px]"
                   style={{ textShadow: "0 2px 4px rgba(0,0,0,0.9)" }}
