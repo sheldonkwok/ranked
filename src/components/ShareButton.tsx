@@ -34,9 +34,9 @@ export default function ShareButton({ username }: { username: string }) {
       className="icon-btn-gold flex items-center"
     >
       {copied ? (
-        <Check size={24} strokeWidth={2.5} aria-hidden="true" />
+        <Check size={20} strokeWidth={2.5} aria-hidden="true" />
       ) : (
-        <Share2 size={24} strokeWidth={2.5} aria-hidden="true" />
+        <Share2 size={20} strokeWidth={2.5} aria-hidden="true" />
       )}
     </button>
   );

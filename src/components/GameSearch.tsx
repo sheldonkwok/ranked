@@ -120,7 +120,6 @@ export default function GameSearch({ onSelectAction }: { onSelectAction: (game: 
             autoFocus
             className="flex-1 bg-transparent py-1 text-[17px] tracking-[1px] text-ink outline-none placeholder:text-ink-placeholder"
           />
-          <span className="blink h-5 w-[9px] bg-ink" aria-hidden="true" />
         </div>
         <p className="text-xs tracking-[0.5px] text-ink-faint">
           Results appear as you type — press Enter to search now.

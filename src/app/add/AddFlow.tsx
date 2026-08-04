@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import ComparisonModal from "@/components/ComparisonModal";
 import CoverImage from "@/components/CoverImage";
 import GameSearch, { type GameSearchResult } from "@/components/GameSearch";
@@ -43,7 +43,7 @@ export default function AddFlow() {
   // failed submit sets `failure` but leaves comparison.status === "done").
   const submittedForRef = useRef<ComparisonCandidate[] | null>(null);
 
-  function backToSearch() {
+  const backToSearch = useCallback(() => {
     setSelectedGame(null);
     setTier(null);
     setCandidates(null);
@@ -51,16 +51,16 @@ export default function AddFlow() {
     setFailure(null);
     submittedForRef.current = null;
     setPhase("search");
-  }
+  }, []);
 
-  function backToTier() {
+  const backToTier = useCallback(() => {
     setTier(null);
     setCandidates(null);
     setTierError(null);
     setFailure(null);
     submittedForRef.current = null;
     setPhase("tier");
-  }
+  }, []);
 
   function handleSelectGame(game: GameSearchResult) {
     setSelectedGame(game);
@@ -152,6 +152,38 @@ export default function AddFlow() {
       submit(comparison.finalPosition);
     }
   }, [phase, comparison.status, comparison.finalPosition, candidates]);
+
+  // Esc steps back one screen in the add flow, mirroring the on-screen back
+  // buttons (TierPicker's onBackAction, the "< BACK" / "← BACK" buttons below),
+  // and only leaves for home from the search step or a conflict failure —
+  // the only phases with no back destination. Ignored while a save is in
+  // flight (`submitting`) so a keystroke can't yank the user away mid-write.
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key !== "Escape" || e.metaKey || e.ctrlKey || e.altKey) return;
+
+      if (phase === "search") {
+        e.preventDefault();
+        router.push("/");
+      } else if (phase === "tier" || phase === "loading-candidates") {
+        e.preventDefault();
+        backToSearch();
+      } else if (phase === "comparing") {
+        e.preventDefault();
+        backToTier();
+      } else if (phase === "failed") {
+        e.preventDefault();
+        if (failure === "conflict") {
+          router.push("/");
+        } else {
+          backToTier();
+        }
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [phase, failure, router, backToSearch, backToTier]);
 
   function handleSkip() {
     // Skipping a too-close comparison counts as the new game LOSING that

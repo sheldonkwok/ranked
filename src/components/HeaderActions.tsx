@@ -25,7 +25,12 @@ export default function HeaderActions({
     <div className="flex items-center gap-5">
       {!onPublicProfile && (
         <>
-          <Link href="/add" aria-label="Rank a game" className="icon-btn-gold flex items-center">
+          <Link
+            href="/add"
+            aria-label="Rank a game"
+            title="Rank a game (A)"
+            className="icon-btn-gold flex items-center"
+          >
             <Plus size={24} strokeWidth={2.5} aria-hidden="true" />
           </Link>
           <ShareButton username={username} />

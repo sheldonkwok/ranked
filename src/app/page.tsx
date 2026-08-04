@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import AddHotkey from "@/components/AddHotkey";
 import RankedList from "@/components/RankedList";
 import Toast from "@/components/Toast";
 import { getDb } from "@/db";
@@ -34,6 +35,7 @@ export default async function Home({ searchParams }: HomePageProps) {
       <div className="flex flex-col items-center py-16 text-center">
         <div className="pixel-panel px-12 py-10 text-[14px] tracking-[1px] text-ink-faint">NO GAMES RANKED YET</div>
         {toast && <Toast message={toast} />}
+        <AddHotkey />
       </div>
     );
   }
@@ -42,6 +44,7 @@ export default async function Home({ searchParams }: HomePageProps) {
     <>
       <RankedList entries={entries} />
       {toast && <Toast message={toast} />}
+      <AddHotkey />
     </>
   );
 }
