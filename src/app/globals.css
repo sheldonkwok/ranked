@@ -246,13 +246,13 @@
   .score-chip-face {
     --chamfer: 4px;
 
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-family: var(--font-pixel);
     font-size: 26px;
     line-height: 1;
-    /* 2px of outer padding + this = the original 4px 12px 3px chip metrics. */
-    padding: 2px 10px 1px;
-    text-align: center;
+    padding: 2px 10px;
     background: var(--score-chip-bg);
     color: var(--score-chip-fg);
     transition:
