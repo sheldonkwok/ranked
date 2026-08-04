@@ -1,5 +1,6 @@
 import CoverImage from "@/components/CoverImage";
 import ScoreButton from "@/components/ScoreButton";
+import ScoreChip from "@/components/ScoreChip";
 import type { Tier } from "@/db/schema";
 
 export type EntryRowProps = {
@@ -10,9 +11,20 @@ export type EntryRowProps = {
   releaseYear: number | null;
   score: number | null;
   tier: Tier;
+  /** Read-only rows (public profiles) render a static chip instead of the edit trigger. */
+  readOnly?: boolean;
 };
 
-export default function EntryRow({ id, rank, name, coverImageId, releaseYear, score, tier }: EntryRowProps) {
+export default function EntryRow({
+  id,
+  rank,
+  name,
+  coverImageId,
+  releaseYear,
+  score,
+  tier,
+  readOnly = false,
+}: EntryRowProps) {
   return (
     <li className="entry-row-grid pixel-row items-center p-[12px_18px]">
       <span
@@ -41,7 +53,11 @@ export default function EntryRow({ id, rank, name, coverImageId, releaseYear, sc
       </div>
 
       <div className="entry-meta flex items-center">
-        <ScoreButton entryId={id} game={{ name, coverImageId, releaseYear }} tier={tier} score={score} />
+        {readOnly ? (
+          <ScoreChip tier={tier} score={score} />
+        ) : (
+          <ScoreButton entryId={id} game={{ name, coverImageId, releaseYear }} tier={tier} score={score} />
+        )}
       </div>
     </li>
   );

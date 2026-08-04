@@ -43,10 +43,11 @@ export const config = {
     /*
      * Run on every path except:
      * - /sign-in (the page we redirect unauthenticated users to)
+     * - /u/* (public read-only ranking pages — no auth required)
      * - /api/auth/* (OAuth start/callback/sign-out routes)
      * - Next.js internals (_next/static, _next/image)
      * - favicon.ico
      */
-    "/((?!sign-in|api/auth|_next/static|_next/image|favicon.ico).*)",
+    "/((?!sign-in|u/|api/auth|_next/static|_next/image|favicon.ico).*)",
   ],
 };

@@ -288,6 +288,18 @@
     --score-chip-fg: #0a0e18;
     --score-chip-shade: #2a3145;
   }
+  /* Read-only chip (public profiles) — same look, no interactive affordances. */
+  .score-chip-static {
+    cursor: default;
+  }
+  .score-chip-static:hover .score-chip-face {
+    background: var(--score-chip-bg);
+    color: var(--score-chip-fg);
+  }
+  .score-chip-static:active {
+    transform: none;
+    filter: drop-shadow(0 3px 0 var(--score-chip-shade));
+  }
 
   /* Transparent 2px-outline action — EntryDialog's destructive buttons, which
      sit muted until hover reveals the danger tint. */

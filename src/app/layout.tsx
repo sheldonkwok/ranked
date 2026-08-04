@@ -1,9 +1,8 @@
-import { Plus } from "lucide-react";
 import type { Metadata } from "next";
 import { VT323 } from "next/font/google";
-import Image from "next/image";
 import Link from "next/link";
 import ChaliceLogo from "@/components/ChaliceLogo";
+import HeaderActions from "@/components/HeaderActions";
 import { getCurrentUser } from "@/lib/session";
 import "./globals.css";
 
@@ -84,25 +83,7 @@ export default async function RootLayout({
                 </span>
               </Link>
               {user && (
-                <div className="flex items-center gap-5">
-                  <Link href="/add" aria-label="Rank a game" className="icon-btn-gold flex items-center">
-                    <Plus size={24} strokeWidth={2.5} aria-hidden="true" />
-                  </Link>
-                  <Link href="/settings" className="flex items-center gap-2.5">
-                    {user.avatarUrl ? (
-                      <Image
-                        src={user.avatarUrl}
-                        alt={user.displayName ?? user.username}
-                        width={24}
-                        height={24}
-                        className="border border-edge/60"
-                      />
-                    ) : (
-                      <div className="cover-hatch h-6 w-6 border border-edge/60" />
-                    )}
-                    <span className="text-[13px] text-ink-muted">{user.username}</span>
-                  </Link>
-                </div>
+                <HeaderActions username={user.username} displayName={user.displayName} avatarUrl={user.avatarUrl} />
               )}
             </div>
           </header>
