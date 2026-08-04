@@ -167,6 +167,19 @@
     transform: translateY(2px);
   }
 
+  /* Bare icon CTA — same gold as pixel-btn-gold, no fill/border. */
+  .icon-btn-gold {
+    color: var(--color-gold);
+    cursor: pointer;
+    transition: color 0.1s ease;
+  }
+  .icon-btn-gold:hover {
+    color: var(--color-gold-pale);
+  }
+  .icon-btn-gold:active {
+    transform: translateY(2px);
+  }
+
   /* Small inline text-style action (SIGN OUT / modal chrome). */
   .pixel-btn-ghost {
     font-family: var(--font-sans);

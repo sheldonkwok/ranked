@@ -1,3 +1,4 @@
+import { Plus } from "lucide-react";
 import type { Metadata } from "next";
 import { VT323 } from "next/font/google";
 import Image from "next/image";
@@ -84,8 +85,8 @@ export default async function RootLayout({
               </Link>
               {user && (
                 <div className="flex items-center gap-5">
-                  <Link href="/add" className="pixel-btn-gold py-0.5">
-                    RANK
+                  <Link href="/add" aria-label="Rank a game" className="icon-btn-gold flex items-center">
+                    <Plus size={24} strokeWidth={2.5} aria-hidden="true" />
                   </Link>
                   <Link href="/settings" className="flex items-center gap-2.5">
                     {user.avatarUrl ? (
