@@ -196,20 +196,27 @@ export default function EntryDialog({
         <p className="text-xs tracking-[1px] text-ink-dim">CURRENTLY: {TIER_LABEL[currentTier].toUpperCase()}</p>
       </div>
 
-      {phase === "tier" && (
+      {(phase === "tier" || phase === "loading-candidates") && (
         <div className="flex flex-col gap-4">
           {tierError && <Banner variant="error">{tierError}</Banner>}
-          <TierPicker onPick={handlePickTier} />
-          <div className="border-t border-edge/45 pt-4">
-            <button type="button" onClick={askToRemove} className="pixel-btn-outline">
-              REMOVE
-            </button>
-          </div>
+          {/* No prompt (the <h2> above already frames it) and no back button
+              (ModalShell's X is the way out), so the picker collapses to just
+              the bar stack. `currentTier` is deliberately NOT passed as
+              `selected` — that state means "committed, working", and it dims
+              the other two bars, which here are the ones the user came to click. */}
+          <TierPicker selected={phase === "loading-candidates" ? tier : null} onPickAction={handlePickTier} />
+          {phase === "loading-candidates" ? (
+            <div role="status">
+              <PixelLoader label={`Loading your ${tier ? TIER_LABEL[tier].toLowerCase() : ""} games…`} />
+            </div>
+          ) : (
+            <div className="border-t border-edge/45 pt-4">
+              <button type="button" onClick={askToRemove} className="pixel-btn-outline">
+                REMOVE
+              </button>
+            </div>
+          )}
         </div>
-      )}
-
-      {phase === "loading-candidates" && (
-        <PixelLoader className="py-4" label={`Loading your ${tier ? TIER_LABEL[tier].toLowerCase() : ""} games…`} />
       )}
 
       {(phase === "submitting" || (phase === "comparing" && !comparison.currentCandidate)) && (

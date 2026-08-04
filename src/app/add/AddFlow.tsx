@@ -190,19 +190,24 @@ export default function AddFlow() {
           </div>
         )}
 
-      {phase === "tier" && (
+      {(phase === "tier" || phase === "loading-candidates") && (
         <div className="flex flex-col gap-4">
           {tierError && <Banner variant="error">{tierError}</Banner>}
-          <p className="font-pixel pixel-text-shadow text-[9px] tracking-[1px] text-ink">HOW WAS IT?</p>
-          <TierPicker onPick={handlePickTier} />
-          <button type="button" onClick={backToSearch} className="pixel-text-shadow self-start text-sm text-ink">
-            &lt; BACK TO RESULTS
-          </button>
+          {/* `selected` comes off phase, not `tier`: a failed candidate fetch
+              leaves `tier` set, and reading it directly would strand the picker
+              in the committed look underneath the retry banner. */}
+          <TierPicker
+            prompt="HOW WAS IT?"
+            selected={phase === "loading-candidates" ? tier : null}
+            onPickAction={handlePickTier}
+            onBackAction={backToSearch}
+          />
+          {phase === "loading-candidates" && (
+            <div role="status">
+              <PixelLoader label={`Loading your ${tier ? TIER_LABEL[tier].toLowerCase() : ""} games…`} />
+            </div>
+          )}
         </div>
-      )}
-
-      {phase === "loading-candidates" && (
-        <PixelLoader className="py-4" label={`Loading your ${tier ? TIER_LABEL[tier].toLowerCase() : ""} games…`} />
       )}
 
       {phase === "comparing" && selectedGame && comparison.currentCandidate && (
