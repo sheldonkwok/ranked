@@ -45,13 +45,13 @@ export default function ModalShell({
   }, [onCloseAction, closeDisabled]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-bg/80 p-4 backdrop-blur-[2px]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-bg/80 p-4 backdrop-blur-[2px] mobile:p-2">
       <div
         ref={panelRef}
         role="dialog"
         aria-modal="true"
         tabIndex={-1}
-        className="pixel-panel relative flex w-full max-w-lg flex-col gap-6 p-6 outline-none"
+        className="pixel-panel relative flex w-full max-w-lg flex-col gap-6 p-6 outline-none mobile:p-4"
       >
         {onCloseAction && (
           <button

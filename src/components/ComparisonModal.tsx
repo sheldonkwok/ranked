@@ -14,12 +14,12 @@ function CoverCard({ game, onClick }: { game: ComparisonGame; onClick: () => voi
     <button
       type="button"
       onClick={onClick}
-      className="pixel-row flex flex-1 flex-col items-center gap-3 border border-edge/45 p-4 text-center active:translate-y-0.5"
+      className="pixel-row flex flex-1 flex-col items-center gap-3 border border-edge/45 p-4 text-center active:translate-y-0.5 mobile:p-2.5"
     >
       <CoverImage
         coverImageId={game.coverImageId}
         size="cover_big"
-        className="aspect-[3/4] w-full max-w-40 border border-edge/45"
+        className="aspect-[3/4] w-full max-w-40 border border-edge/45 mobile:max-w-none"
       />
       <div className="flex flex-col gap-0.5">
         <span className="text-sm font-medium text-ink">{game.name}</span>

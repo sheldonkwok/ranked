@@ -28,6 +28,12 @@ export default function RankedList({ entries, readOnly = false }: { entries: Ran
           />
         ))}
       </ol>
+      {/* Mobile-only: on a phone the header isn't always in view, so the
+          list needs its own explicit end marker rather than relying on
+          "no more rows" being obvious. */}
+      <p className="pixel-text-shadow mt-3.5 hidden text-center text-[15px] tracking-[1px] text-ink-faint mobile:block">
+        END OF LIST — RANK ANOTHER GAME TO ADD
+      </p>
     </>
   );
 }

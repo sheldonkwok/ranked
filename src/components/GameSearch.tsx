@@ -152,13 +152,13 @@ export default function GameSearch({ onSelectAction }: { onSelectAction: (game: 
               <button
                 type="button"
                 onClick={() => onSelectAction(game)}
-                className="pixel-row grid w-full items-center gap-4 p-[11px_14px] text-left"
+                className="pixel-row grid w-full items-center gap-4 p-[11px_14px] text-left mobile:gap-3 mobile:p-[9px_12px]"
                 style={{ gridTemplateColumns: "42px 1fr auto" }}
               >
                 <CoverImage
                   coverImageId={game.coverImageId}
                   size="cover_small"
-                  className="h-14 w-[42px] shrink-0 border border-edge/45"
+                  className="h-14 w-[42px] shrink-0 border border-edge/45 mobile:h-12 mobile:w-9"
                 />
 
                 <div className="flex min-w-0 flex-col gap-1.5">

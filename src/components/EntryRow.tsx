@@ -26,9 +26,9 @@ export default function EntryRow({
   readOnly = false,
 }: EntryRowProps) {
   return (
-    <li className="entry-row-grid pixel-row items-center p-[12px_18px]">
+    <li className="entry-row-grid pixel-row items-center">
       <span
-        className="entry-rank font-pixel text-center text-[28px] text-gold-bright"
+        className="entry-rank font-pixel text-center text-gold-bright"
         style={{ textShadow: "0 2px 3px rgba(0,0,0,0.9)" }}
       >
         {String(rank).padStart(2, "0")}
@@ -39,17 +39,14 @@ export default function EntryRow({
         size="cover_small"
         width={42}
         height={56}
-        className="entry-cover h-14 w-[42px] shrink-0 border border-edge/45"
+        className="entry-cover shrink-0 border border-edge/45"
       />
 
       <div className="entry-title min-w-0">
-        <p
-          className="truncate text-[17px] tracking-[0.5px] text-ink"
-          style={{ textShadow: "0 2px 4px rgba(0,0,0,0.9)" }}
-        >
+        <p className="entry-name text-ink" style={{ textShadow: "0 2px 4px rgba(0,0,0,0.9)" }}>
           {name}
         </p>
-        {releaseYear !== null && <p className="text-[16px] tracking-[1px] text-ink-dim">{releaseYear}</p>}
+        {releaseYear !== null && <p className="entry-year tracking-[1px] text-ink-dim">{releaseYear}</p>}
       </div>
 
       <div className="entry-meta flex items-center">

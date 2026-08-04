@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { VT323 } from "next/font/google";
 import Link from "next/link";
 import ChaliceLogo from "@/components/ChaliceLogo";
@@ -35,6 +35,12 @@ export const metadata: Metadata = {
   },
 };
 
+// Matches --color-bg, so mobile browser chrome (status bar / URL bar) blends
+// with the app instead of defaulting to white.
+export const viewport: Viewport = {
+  themeColor: "#05070f",
+};
+
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -66,15 +72,15 @@ export default async function RootLayout({
 
         <div className="relative z-[3]">
           <header
-            className="border-b border-edge/35 backdrop-blur-[2px]"
+            className="border-b border-edge/35 backdrop-blur-[2px] mobile:sticky mobile:top-0 mobile:z-20"
             style={{
               background:
                 "linear-gradient(180deg, color-mix(in srgb, var(--color-panel) 88%, transparent) 0%, color-mix(in srgb, var(--color-panel) 62%, transparent) 100%)",
             }}
           >
-            <div className="mx-auto flex max-w-[980px] items-center justify-between gap-6 px-6 py-4">
-              <Link href="/" className="flex items-center gap-3.5">
-                <ChaliceLogo />
+            <div className="mx-auto flex max-w-[980px] items-center justify-between gap-6 px-6 py-4 mobile:gap-2 mobile:px-3 mobile:py-2.5">
+              <Link href="/" className="flex items-center gap-3.5 mobile:gap-2">
+                <ChaliceLogo className="block h-8 w-8" />
                 <span
                   className="pixel-heading ml-1.5 text-[20px] tracking-[1px]"
                   style={{ textShadow: "0 2px 4px rgba(0,0,0,0.9)" }}
@@ -87,7 +93,9 @@ export default async function RootLayout({
               )}
             </div>
           </header>
-          <main className="mx-auto max-w-[980px] px-6 pt-10 pb-25">{children}</main>
+          <main className="mx-auto max-w-[980px] px-6 pt-10 pb-25 mobile:px-3 mobile:pt-4 mobile:pb-10">
+            {children}
+          </main>
         </div>
       </body>
     </html>

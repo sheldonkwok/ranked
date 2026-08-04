@@ -22,7 +22,7 @@ export default function HeaderActions({
   const onPublicProfile = pathname.startsWith("/u/");
 
   return (
-    <div className="flex items-center gap-5">
+    <div className="flex items-center gap-5 mobile:gap-3.5">
       {!onPublicProfile && (
         <>
           <Link
@@ -48,7 +48,10 @@ export default function HeaderActions({
         ) : (
           <div className="cover-hatch h-6 w-6 border border-edge/60" />
         )}
-        <span className="text-[13px] text-ink-muted">{username}</span>
+        {/* The username is the only elastic element in the header — hide it
+            below 360px, where the header would otherwise overflow. The
+            avatar alone still links to /settings. */}
+        <span className="text-[13px] text-ink-muted mobile-xs:hidden">{username}</span>
       </Link>
     </div>
   );

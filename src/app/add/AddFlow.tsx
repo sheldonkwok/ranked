@@ -203,13 +203,13 @@ export default function AddFlow() {
         phase === "failed") &&
         selectedGame && (
           <div
-            className="flex items-center gap-[18px] border border-edge/70 px-[18px] py-4"
+            className="flex items-center gap-[18px] border border-edge/70 px-[18px] py-4 mobile:gap-3 mobile:px-3 mobile:py-2.5"
             style={{ background: "linear-gradient(90deg, rgba(46,104,220,1) 0%, rgba(6,12,28,0.96) 72%)" }}
           >
             <CoverImage
               coverImageId={selectedGame.coverImageId}
               size="cover_small"
-              className="h-[70px] w-[52px] shrink-0 border border-edge/65"
+              className="h-[70px] w-[52px] shrink-0 border border-edge/65 mobile:h-14 mobile:w-10"
             />
             <div className="flex flex-col gap-2">
               <span className="text-[19px] text-ink" style={{ textShadow: "0 2px 4px rgba(0,0,0,0.9)" }}>
