@@ -2,17 +2,25 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import SignOutButton from "@/components/SignOutButton";
+import SteamLink from "@/components/SteamLink";
+import Banner from "@/components/ui/Banner";
 import { getCurrentUser } from "@/lib/session";
 
 export const metadata: Metadata = {
   title: "Settings",
 };
 
-export default async function SettingsPage() {
+type SettingsPageProps = {
+  searchParams: Promise<{ steam?: string }>;
+};
+
+export default async function SettingsPage({ searchParams }: SettingsPageProps) {
   const user = await getCurrentUser();
   if (!user) {
     redirect("/sign-in");
   }
+
+  const { steam } = await searchParams;
 
   const memberSince = new Intl.DateTimeFormat("en-US", {
     month: "long",
@@ -38,6 +46,15 @@ export default async function SettingsPage() {
         <p className="text-sm tracking-[1px] text-ink-dim">@{user.username}</p>
         <p className="text-xs tracking-[1px] text-ink-faint">MEMBER SINCE {memberSince.toUpperCase()}</p>
       </div>
+
+      {steam === "error" && (
+        <Banner variant="error">Something went wrong linking your Steam account. Please try again.</Banner>
+      )}
+      {steam === "taken" && (
+        <Banner variant="error">That Steam account is already linked to another Ranked account.</Banner>
+      )}
+
+      <SteamLink steamId={user.steamId} steamPersonaName={user.steamPersonaName} steamAvatarUrl={user.steamAvatarUrl} />
 
       <SignOutButton />
     </div>

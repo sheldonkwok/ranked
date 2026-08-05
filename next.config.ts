@@ -18,6 +18,16 @@ const nextConfig: NextConfig = {
         hostname: "static-cdn.jtvnw.net",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "avatars.steamstatic.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "avatars.akamai.steamstatic.com",
+        pathname: "/**",
+      },
     ],
   },
 };

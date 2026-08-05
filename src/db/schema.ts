@@ -22,6 +22,13 @@ export const users = pgTable("users", {
   username: text("username").notNull(),
   displayName: text("display_name"),
   avatarUrl: text("avatar_url"),
+  // SteamID64, verified via Steam OpenID sign-in. Nullable — not every user
+  // links Steam. Unique so two Ranked accounts can't claim the same Steam
+  // account.
+  steamId: text("steam_id").unique(),
+  steamPersonaName: text("steam_persona_name"),
+  steamAvatarUrl: text("steam_avatar_url"),
+  steamLinkedAt: timestamp("steam_linked_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
