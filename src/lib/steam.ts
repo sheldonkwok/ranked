@@ -12,6 +12,8 @@ if (typeof window !== "undefined") {
   throw new Error("steam.ts is server-only");
 }
 
+import { withSpan } from "@/lib/trace";
+
 /**
  * `APP_URL` is the same env var the Twitch OAuth redirect URI is built from
  * (see `src/lib/auth.ts`). Read lazily (only when a Steam route actually
@@ -192,30 +194,40 @@ type SteamOwnedGamesResponse = {
  * is the whole point of the call, so there's no silent degrade.
  */
 export async function fetchSteamLibrary(steamId: string): Promise<SteamOwnedGame[]> {
-  const apiKey = process.env.STEAM_API_KEY;
-  if (!apiKey) throw new SteamNotConfiguredError();
+  return withSpan("steam.fetchSteamLibrary", async (span) => {
+    const apiKey = process.env.STEAM_API_KEY;
+    if (!apiKey) {
+      console.error("fetchSteamLibrary: STEAM_API_KEY is not configured");
+      throw new SteamNotConfiguredError();
+    }
 
-  const url = new URL(`${STEAM_API_BASE}/IPlayerService/GetOwnedGames/v0001/`);
-  url.searchParams.set("key", apiKey);
-  url.searchParams.set("steamid", steamId);
-  url.searchParams.set("include_appinfo", "true");
-  url.searchParams.set("include_played_free_games", "true");
-  url.searchParams.set("format", "json");
+    const url = new URL(`${STEAM_API_BASE}/IPlayerService/GetOwnedGames/v0001/`);
+    url.searchParams.set("key", apiKey);
+    url.searchParams.set("steamid", steamId);
+    url.searchParams.set("include_appinfo", "true");
+    url.searchParams.set("include_played_free_games", "true");
+    url.searchParams.set("format", "json");
 
-  const res = await fetch(url.toString(), { cache: "no-store" });
-  if (!res.ok) {
-    throw new Error(`Steam GetOwnedGames failed (status ${res.status})`);
-  }
+    const res = await fetch(url.toString(), { cache: "no-store" });
+    span.setAttribute("http.status_code", res.status);
+    if (!res.ok) {
+      throw new Error(`Steam GetOwnedGames failed (status ${res.status})`);
+    }
 
-  const body = (await res.json()) as SteamOwnedGamesResponse;
-  const games = body.response.games ?? [];
+    const body = (await res.json()) as SteamOwnedGamesResponse;
+    const games = body.response.games ?? [];
+    span.setAttribute("steam.game_count", games.length);
 
-  return games
-    .map((game) => ({
-      appId: game.appid,
-      name: game.name ?? "",
-      playtimeForever: game.playtime_forever ?? 0,
-    }))
-    .filter((game) => game.name.length > 0)
-    .sort((a, b) => b.playtimeForever - a.playtimeForever);
+    const result = games
+      .map((game) => ({
+        appId: game.appid,
+        name: game.name ?? "",
+        playtimeForever: game.playtime_forever ?? 0,
+      }))
+      .filter((game) => game.name.length > 0)
+      .sort((a, b) => b.playtimeForever - a.playtimeForever);
+
+    span.setAttribute("steam.returned", result.length);
+    return result;
+  });
 }
