@@ -1,38 +1,47 @@
-// Small wrapper around the OpenTelemetry API for ad-hoc spans in server code.
-//
-// Registration lives in `src/instrumentation.ts` (via `@vercel/otel`), which
-// only actually exports anywhere when running on Vercel. Off Vercel (local
-// dev, `pnpm test`, CI) `trace.getTracer` returns the OTel no-op
-// implementation, so every function here is a harmless pass-through — no env
-// checks needed at the call sites.
-import { type Attributes, SpanStatusCode, trace } from "@opentelemetry/api";
+// Small helper for ad-hoc timing of server operations, logged straight to
+// stdout — no exporter, no dashboard. Vercel's trace viewer is a paid
+// add-on we don't want to depend on; a `console.log` line shows up for free
+// in `next dev` output and in Vercel's runtime logs. These always log, in
+// every environment (dev, prod, `pnpm test`) — there's no gating.
+export type TimingAttributes = Record<string, string | number | boolean>;
 
-const tracer = trace.getTracer("ranked");
+export type TimingRecorder = {
+  /** Adds (or overwrites) a key/value pair that gets printed alongside the duration. */
+  set(key: string, value: string | number | boolean): void;
+};
 
 /**
- * Runs `fn` inside a new active span named `name`. Nesting is implicit:
- * calling `withSpan` again inside `fn` parents the inner span under this one
- * via OTel's context propagation.
+ * Runs `fn`, timing it with `performance.now()`, and logs a single line like
+ * `[timing] igdb.search 142ms endpoint=games status=200` once it settles.
  *
- * `fn` receives the span so it can call `span.setAttribute(s)` once it knows
- * values only available partway through (e.g. a result count). On a thrown
- * error the exception is recorded and the span is marked errored before it
- * rethrows, so failures show up in the trace instead of just disappearing.
+ * `fn` receives a recorder so it can add attributes only known partway
+ * through (e.g. a result count). On a thrown error the line still logs (with
+ * an `error=<name>` attribute) before rethrowing, so failures show up with
+ * their duration instead of just disappearing.
  */
-export async function withSpan<T>(
+export async function withTiming<T>(
   name: string,
-  fn: (span: ReturnType<typeof tracer.startSpan>) => Promise<T>,
-  attributes?: Attributes
+  fn: (t: TimingRecorder) => Promise<T>,
+  attributes?: TimingAttributes
 ): Promise<T> {
-  return tracer.startActiveSpan(name, { attributes }, async (span) => {
-    try {
-      return await fn(span);
-    } catch (err) {
-      span.recordException(err instanceof Error ? err : new Error(String(err)));
-      span.setStatus({ code: SpanStatusCode.ERROR });
-      throw err;
-    } finally {
-      span.end();
-    }
-  });
+  const attrs: TimingAttributes = { ...attributes };
+  const recorder: TimingRecorder = {
+    set(key, value) {
+      attrs[key] = value;
+    },
+  };
+
+  const start = performance.now();
+  try {
+    return await fn(recorder);
+  } catch (err) {
+    attrs.error = err instanceof Error ? err.name : String(err);
+    throw err;
+  } finally {
+    const ms = Math.round(performance.now() - start);
+    const pairs = Object.entries(attrs)
+      .map(([key, value]) => `${key}=${value}`)
+      .join(" ");
+    console.log(`[timing] ${name} ${ms}ms${pairs ? ` ${pairs}` : ""}`);
+  }
 }

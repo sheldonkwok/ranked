@@ -10,7 +10,7 @@ if (typeof window !== "undefined") {
   throw new Error("igdb.ts is server-only");
 }
 
-import { withSpan } from "@/lib/trace";
+import { withTiming } from "@/lib/trace";
 
 const TWITCH_TOKEN_URL = "https://id.twitch.tv/oauth2/token";
 const IGDB_API_BASE = "https://api.igdb.com/v4";
@@ -77,10 +77,10 @@ async function getAccessToken(forceRefresh = false): Promise<string> {
   if (!forceRefresh && isTokenFresh(tokenCache)) {
     return tokenCache.accessToken;
   }
-  // Only spans the cache-miss path — the span's presence in a trace *means*
-  // "token was cold and had to be refetched", so a span on every call (the
-  // common, synchronous-cache-read case) would just be noise.
-  return withSpan("igdb.token", async () => {
+  // Only times the cache-miss path — a log line here *means* "token was cold
+  // and had to be refetched", so timing every call (the common,
+  // synchronous-cache-read case) would just be noise.
+  return withTiming("igdb.token", async () => {
     const fresh = await fetchNewToken();
     tokenCache = fresh;
     return fresh.accessToken;
@@ -103,27 +103,27 @@ async function performIgdbFetch(endpoint: string, body: string, accessToken: str
 }
 
 /**
- * `spanName` labels the request in traces (e.g. "igdb.multiquery.exact" vs
- * "igdb.multiquery.wildcard") — without it every IGDB call would collapse
- * into one indistinguishable span name regardless of which query it was.
+ * `timingName` labels the request in the timing log (e.g. "igdb.multiquery.exact"
+ * vs "igdb.multiquery.wildcard") — without it every IGDB call would collapse
+ * into one indistinguishable log line regardless of which query it was.
  */
-async function igdbRequest<T>(spanName: string, endpoint: string, body: string): Promise<T> {
-  return withSpan(
-    spanName,
-    async (span) => {
+async function igdbRequest<T>(timingName: string, endpoint: string, body: string): Promise<T> {
+  return withTiming(
+    timingName,
+    async (t) => {
       const accessToken = await getAccessToken();
       let res = await performIgdbFetch(endpoint, body, accessToken);
 
       if (res.status === 401) {
         // Token may have been revoked or expired early — invalidate the cache,
         // fetch a brand new token, and retry exactly once.
-        span.setAttribute("igdb.retried_401", true);
+        t.set("retried_401", true);
         tokenCache = null;
         const refreshedToken = await getAccessToken(true);
         res = await performIgdbFetch(endpoint, body, refreshedToken);
       }
 
-      span.setAttribute("http.status_code", res.status);
+      t.set("status", res.status);
       if (!res.ok) {
         const text = await res.text();
         throw new Error(`IGDB request to "${endpoint}" failed (status ${res.status}): ${text}`);
@@ -131,7 +131,7 @@ async function igdbRequest<T>(spanName: string, endpoint: string, body: string):
 
       return (await res.json()) as T;
     },
-    { "igdb.endpoint": endpoint, "igdb.body_bytes": body.length }
+    { endpoint, body_bytes: body.length }
   );
 }
 
@@ -344,9 +344,9 @@ export async function resolveGamesByName(names: string[]): Promise<Map<string, I
     throw new Error(`resolveGamesByName: got ${names.length} names, max is ${IGDB_MULTIQUERY_MAX}`);
   }
 
-  return withSpan(
+  return withTiming(
     "igdb.resolveGamesByName",
-    async (span) => {
+    async (t) => {
       const resolved = new Map<string, IgdbGame>();
 
       // Pass 1: exact-ish (case-insensitive) name/alternative_names match.
@@ -370,11 +370,11 @@ export async function resolveGamesByName(names: string[]): Promise<Map<string, I
         }
       }
 
-      span.setAttribute("igdb.exact_hits", names.length - missIndexes.length);
-      span.setAttribute("igdb.misses", missIndexes.length);
+      t.set("exact_hits", names.length - missIndexes.length);
+      t.set("misses", missIndexes.length);
 
       if (missIndexes.length === 0) {
-        span.setAttribute("igdb.resolved", resolved.size);
+        t.set("resolved", resolved.size);
         return resolved;
       }
 
@@ -402,9 +402,9 @@ export async function resolveGamesByName(names: string[]): Promise<Map<string, I
         if (best) resolved.set(names[i], best);
       }
 
-      span.setAttribute("igdb.resolved", resolved.size);
+      t.set("resolved", resolved.size);
       return resolved;
     },
-    { "igdb.batch_size": names.length }
+    { batch_size: names.length }
   );
 }

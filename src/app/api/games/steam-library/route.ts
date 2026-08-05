@@ -1,4 +1,3 @@
-import { trace } from "@opentelemetry/api";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { badRequest, releaseYearOf, withErrorHandling } from "@/app/api/_lib/handler";
@@ -6,7 +5,7 @@ import { entries, games, getDb } from "@/db";
 import { IGDB_MULTIQUERY_MAX, type IgdbGame, resolveGamesByName } from "@/lib/igdb";
 import { requireUser } from "@/lib/session";
 import { fetchSteamLibrary, SteamNotConfiguredError } from "@/lib/steam";
-import { withSpan } from "@/lib/trace";
+import { withTiming } from "@/lib/trace";
 
 const LIBRARY_RESULT_LIMIT = 10;
 // How far down the (already playtime-sorted) Steam library to scan looking
@@ -36,16 +35,16 @@ export async function GET() {
     }
 
     const scan = library.slice(0, STEAM_SCAN_LIMIT);
-    trace.getActiveSpan()?.setAttributes({ "library.size": library.length, "library.scanned": scan.length });
+    console.log(`[timing] steam.library size=${library.length} scanned=${scan.length}`);
 
-    const rankedIgdbIds = await withSpan("db.rankedIgdbIds", async (span) => {
+    const rankedIgdbIds = await withTiming("db.rankedIgdbIds", async (t) => {
       const db = await getDb();
       const rankedRows = await db
         .select({ igdbId: games.igdbId })
         .from(entries)
         .innerJoin(games, eq(entries.gameId, games.id))
         .where(eq(entries.userId, user.id));
-      span.setAttribute("db.row_count", rankedRows.length);
+      t.set("row_count", rankedRows.length);
       return new Set(rankedRows.map((row) => row.igdbId));
     });
 
@@ -54,9 +53,9 @@ export async function GET() {
     const seenIgdbIds = new Set<number>();
 
     try {
-      await withSpan(
+      await withTiming(
         "igdb.matchLibrary",
-        async (span) => {
+        async (t) => {
           let batches = 0;
           for (
             let start = 0;
@@ -82,10 +81,10 @@ export async function GET() {
               results.push({ ...match, playtimeForever: steamGame.playtimeForever });
             }
           }
-          span.setAttribute("igdb.batches", batches);
-          span.setAttribute("igdb.matched", results.length);
+          t.set("batches", batches);
+          t.set("matched", results.length);
         },
-        { "igdb.scan_size": scan.length }
+        { scan_size: scan.length }
       );
     } catch (err) {
       console.error("IGDB resolution failed:", err);

@@ -12,7 +12,7 @@ if (typeof window !== "undefined") {
   throw new Error("steam.ts is server-only");
 }
 
-import { withSpan } from "@/lib/trace";
+import { withTiming } from "@/lib/trace";
 
 /**
  * `APP_URL` is the same env var the Twitch OAuth redirect URI is built from
@@ -194,7 +194,7 @@ type SteamOwnedGamesResponse = {
  * is the whole point of the call, so there's no silent degrade.
  */
 export async function fetchSteamLibrary(steamId: string): Promise<SteamOwnedGame[]> {
-  return withSpan("steam.fetchSteamLibrary", async (span) => {
+  return withTiming("steam.fetchSteamLibrary", async (t) => {
     const apiKey = process.env.STEAM_API_KEY;
     if (!apiKey) {
       console.error("fetchSteamLibrary: STEAM_API_KEY is not configured");
@@ -209,14 +209,14 @@ export async function fetchSteamLibrary(steamId: string): Promise<SteamOwnedGame
     url.searchParams.set("format", "json");
 
     const res = await fetch(url.toString(), { cache: "no-store" });
-    span.setAttribute("http.status_code", res.status);
+    t.set("status", res.status);
     if (!res.ok) {
       throw new Error(`Steam GetOwnedGames failed (status ${res.status})`);
     }
 
     const body = (await res.json()) as SteamOwnedGamesResponse;
     const games = body.response.games ?? [];
-    span.setAttribute("steam.game_count", games.length);
+    t.set("game_count", games.length);
 
     const result = games
       .map((game) => ({
@@ -227,7 +227,7 @@ export async function fetchSteamLibrary(steamId: string): Promise<SteamOwnedGame
       .filter((game) => game.name.length > 0)
       .sort((a, b) => b.playtimeForever - a.playtimeForever);
 
-    span.setAttribute("steam.returned", result.length);
+    t.set("returned", result.length);
     return result;
   });
 }
