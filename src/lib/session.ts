@@ -13,6 +13,7 @@ import { eq } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { cache } from "react";
 import { getDb, type Session, sessions, type User, users } from "@/db";
+import { withResolvedAvatar } from "@/lib/avatar";
 
 /** Name of the cookie holding the raw session token. */
 export const SESSION_COOKIE_NAME = "session";
@@ -46,7 +47,7 @@ async function getOrCreateDevUser(): Promise<User> {
       set: { username: "dev" },
     })
     .returning();
-  return user;
+  return withResolvedAvatar(user);
 }
 
 /**
@@ -122,7 +123,7 @@ export async function validateSessionToken(token: string): Promise<{ user: User;
     await db.update(sessions).set({ expiresAt: session.expiresAt }).where(eq(sessions.id, sessionId));
   }
 
-  return { user, session };
+  return { user: withResolvedAvatar(user), session };
 }
 
 /** Deletes a session row by its (hashed) id, logging it out everywhere. */
