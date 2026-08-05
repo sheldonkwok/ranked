@@ -10,8 +10,6 @@ if (typeof window !== "undefined") {
   throw new Error("igdb.ts is server-only");
 }
 
-import { withTiming } from "@/lib/trace";
-
 const TWITCH_TOKEN_URL = "https://id.twitch.tv/oauth2/token";
 const IGDB_API_BASE = "https://api.igdb.com/v4";
 
@@ -77,14 +75,9 @@ async function getAccessToken(forceRefresh = false): Promise<string> {
   if (!forceRefresh && isTokenFresh(tokenCache)) {
     return tokenCache.accessToken;
   }
-  // Only times the cache-miss path — a log line here *means* "token was cold
-  // and had to be refetched", so timing every call (the common,
-  // synchronous-cache-read case) would just be noise.
-  return withTiming("igdb.token", async () => {
-    const fresh = await fetchNewToken();
-    tokenCache = fresh;
-    return fresh.accessToken;
-  });
+  const fresh = await fetchNewToken();
+  tokenCache = fresh;
+  return fresh.accessToken;
 }
 
 async function performIgdbFetch(endpoint: string, body: string, accessToken: string) {
@@ -102,37 +95,24 @@ async function performIgdbFetch(endpoint: string, body: string, accessToken: str
   });
 }
 
-/**
- * `timingName` labels the request in the timing log (e.g. "igdb.multiquery.exact"
- * vs "igdb.multiquery.wildcard") — without it every IGDB call would collapse
- * into one indistinguishable log line regardless of which query it was.
- */
-async function igdbRequest<T>(timingName: string, endpoint: string, body: string): Promise<T> {
-  return withTiming(
-    timingName,
-    async (t) => {
-      const accessToken = await getAccessToken();
-      let res = await performIgdbFetch(endpoint, body, accessToken);
+async function igdbRequest<T>(endpoint: string, body: string): Promise<T> {
+  const accessToken = await getAccessToken();
+  let res = await performIgdbFetch(endpoint, body, accessToken);
 
-      if (res.status === 401) {
-        // Token may have been revoked or expired early — invalidate the cache,
-        // fetch a brand new token, and retry exactly once.
-        t.set("retried_401", true);
-        tokenCache = null;
-        const refreshedToken = await getAccessToken(true);
-        res = await performIgdbFetch(endpoint, body, refreshedToken);
-      }
+  if (res.status === 401) {
+    // Token may have been revoked or expired early — invalidate the cache,
+    // fetch a brand new token, and retry exactly once.
+    tokenCache = null;
+    const refreshedToken = await getAccessToken(true);
+    res = await performIgdbFetch(endpoint, body, refreshedToken);
+  }
 
-      t.set("status", res.status);
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`IGDB request to "${endpoint}" failed (status ${res.status}): ${text}`);
-      }
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`IGDB request to "${endpoint}" failed (status ${res.status}): ${text}`);
+  }
 
-      return (await res.json()) as T;
-    },
-    { endpoint, body_bytes: body.length }
-  );
+  return (await res.json()) as T;
 }
 
 export type IgdbGame = {
@@ -253,7 +233,7 @@ export async function searchGames(query: string): Promise<IgdbGame[]> {
   const altNameClause = `alternative_names.name ~ *"${escapeApicalypseString(query.trim())}"*`;
   const body = `${GAME_FIELDS} where ((${nameClause}) | ${altNameClause}) & version_parent = null & game_type = ${GAME_TYPES}; sort total_rating_count desc; limit ${SEARCH_FETCH_LIMIT};`;
 
-  const results = (await igdbRequest<RawIgdbGame[]>("igdb.search", "games", body)).map(normalizeGame);
+  const results = (await igdbRequest<RawIgdbGame[]>("games", body)).map(normalizeGame);
   return mergeSearchResults(query, results);
 }
 
@@ -262,7 +242,7 @@ export async function getGameByIgdbId(igdbId: number): Promise<IgdbGame | null> 
     throw new Error(`getGameByIgdbId: igdbId must be a positive integer, got ${igdbId}`);
   }
   const body = `${GAME_FIELDS} where id = ${igdbId}; limit 1;`;
-  const results = await igdbRequest<RawIgdbGame[]>("igdb.getById", "games", body);
+  const results = await igdbRequest<RawIgdbGame[]>("games", body);
   return results.length > 0 ? normalizeGame(results[0]) : null;
 }
 
@@ -344,67 +324,48 @@ export async function resolveGamesByName(names: string[]): Promise<Map<string, I
     throw new Error(`resolveGamesByName: got ${names.length} names, max is ${IGDB_MULTIQUERY_MAX}`);
   }
 
-  return withTiming(
-    "igdb.resolveGamesByName",
-    async (t) => {
-      const resolved = new Map<string, IgdbGame>();
+  const resolved = new Map<string, IgdbGame>();
 
-      // Pass 1: exact-ish (case-insensitive) name/alternative_names match.
-      const exactQueries = names.map((name, i) => {
-        const escaped = escapeApicalypseString(normalizeSteamName(name));
-        return `query games "q${i}" { ${GAME_FIELDS} where (name ~ "${escaped}" | alternative_names.name ~ "${escaped}") & version_parent = null & game_type = ${GAME_TYPES}; sort total_rating_count desc; limit 1; };`;
-      });
-      const exactResults = await igdbRequest<MultiquerySubResult[]>(
-        "igdb.multiquery.exact",
-        "multiquery",
-        exactQueries.join("\n")
-      );
+  // Pass 1: exact-ish (case-insensitive) name/alternative_names match.
+  const exactQueries = names.map((name, i) => {
+    const escaped = escapeApicalypseString(normalizeSteamName(name));
+    return `query games "q${i}" { ${GAME_FIELDS} where (name ~ "${escaped}" | alternative_names.name ~ "${escaped}") & version_parent = null & game_type = ${GAME_TYPES}; sort total_rating_count desc; limit 1; };`;
+  });
+  const exactResults = await igdbRequest<MultiquerySubResult[]>("multiquery", exactQueries.join("\n"));
 
-      const missIndexes: number[] = [];
-      for (let i = 0; i < names.length; i++) {
-        const raw = exactResults.find((r) => r.name === `q${i}`)?.result ?? [];
-        if (raw.length > 0) {
-          resolved.set(names[i], normalizeGame(raw[0]));
-        } else {
-          missIndexes.push(i);
-        }
-      }
+  const missIndexes: number[] = [];
+  for (let i = 0; i < names.length; i++) {
+    const raw = exactResults.find((r) => r.name === `q${i}`)?.result ?? [];
+    if (raw.length > 0) {
+      resolved.set(names[i], normalizeGame(raw[0]));
+    } else {
+      missIndexes.push(i);
+    }
+  }
 
-      t.set("exact_hits", names.length - missIndexes.length);
-      t.set("misses", missIndexes.length);
+  if (missIndexes.length === 0) {
+    return resolved;
+  }
 
-      if (missIndexes.length === 0) {
-        t.set("resolved", resolved.size);
-        return resolved;
-      }
+  // Pass 2: wildcard candidate generation + verified pick, for pass-1 misses only.
+  const fallbackQueries = missIndexes.map((i) => {
+    const base = stripEditionSuffix(normalizeSteamName(names[i]));
+    const tokens = tokenize(base);
+    const nameClause =
+      tokens.length > 0
+        ? tokens.map((token) => `name ~ *"${escapeApicalypseString(token)}"*`).join(" & ")
+        : `name ~ *"${escapeApicalypseString(base)}"*`;
+    const altClause = `alternative_names.name ~ *"${escapeApicalypseString(base)}"*`;
+    return `query games "q${i}" { ${GAME_FIELDS} where ((${nameClause}) | ${altClause}) & version_parent = null & game_type = ${GAME_TYPES}; sort total_rating_count desc; limit 8; };`;
+  });
+  const fallbackResults = await igdbRequest<MultiquerySubResult[]>("multiquery", fallbackQueries.join("\n"));
 
-      // Pass 2: wildcard candidate generation + verified pick, for pass-1 misses only.
-      const fallbackQueries = missIndexes.map((i) => {
-        const base = stripEditionSuffix(normalizeSteamName(names[i]));
-        const tokens = tokenize(base);
-        const nameClause =
-          tokens.length > 0
-            ? tokens.map((token) => `name ~ *"${escapeApicalypseString(token)}"*`).join(" & ")
-            : `name ~ *"${escapeApicalypseString(base)}"*`;
-        const altClause = `alternative_names.name ~ *"${escapeApicalypseString(base)}"*`;
-        return `query games "q${i}" { ${GAME_FIELDS} where ((${nameClause}) | ${altClause}) & version_parent = null & game_type = ${GAME_TYPES}; sort total_rating_count desc; limit 8; };`;
-      });
-      const fallbackResults = await igdbRequest<MultiquerySubResult[]>(
-        "igdb.multiquery.wildcard",
-        "multiquery",
-        fallbackQueries.join("\n")
-      );
+  for (const i of missIndexes) {
+    const raw = fallbackResults.find((r) => r.name === `q${i}`)?.result ?? [];
+    const candidates = raw.map(normalizeGame);
+    const best = pickBestMatch(names[i], candidates);
+    if (best) resolved.set(names[i], best);
+  }
 
-      for (const i of missIndexes) {
-        const raw = fallbackResults.find((r) => r.name === `q${i}`)?.result ?? [];
-        const candidates = raw.map(normalizeGame);
-        const best = pickBestMatch(names[i], candidates);
-        if (best) resolved.set(names[i], best);
-      }
-
-      t.set("resolved", resolved.size);
-      return resolved;
-    },
-    { batch_size: names.length }
-  );
+  return resolved;
 }

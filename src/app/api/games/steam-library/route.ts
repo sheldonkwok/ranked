@@ -6,7 +6,6 @@ import { type GameUpsert, upsertGames } from "@/lib/games";
 import { IGDB_MULTIQUERY_MAX, type IgdbGame, resolveGamesByName } from "@/lib/igdb";
 import { requireUser } from "@/lib/session";
 import { fetchSteamLibrary, SteamNotConfiguredError } from "@/lib/steam";
-import { withTiming } from "@/lib/trace";
 
 const LIBRARY_RESULT_LIMIT = 10;
 // How far down the (already playtime-sorted) Steam library to scan looking
@@ -77,7 +76,6 @@ export async function GET() {
     }
 
     const scan = library.slice(0, STEAM_SCAN_LIMIT);
-    console.log(`[timing] steam.library size=${library.length} scanned=${scan.length}`);
 
     const db = await getDb();
     const scanAppIds = scan.map((game) => game.appId);
@@ -87,43 +85,35 @@ export async function GET() {
     // excluded from results), which Steam appids already have a cached IGDB
     // match (`games.steam_app_id`), and which are a cached "no match" within
     // the miss TTL (`steam_app_misses`).
-    const { rankedIgdbIds, cachedByAppId, freshMisses } = await withTiming("db.libraryLookup", async (t) => {
-      const rankedRows = await db
-        .select({ igdbId: games.igdbId })
-        .from(entries)
-        .innerJoin(games, eq(entries.gameId, games.id))
-        .where(eq(entries.userId, user.id));
+    const rankedRows = await db
+      .select({ igdbId: games.igdbId })
+      .from(entries)
+      .innerJoin(games, eq(entries.gameId, games.id))
+      .where(eq(entries.userId, user.id));
 
-      const cachedRows =
-        scanAppIds.length > 0 ? await db.select().from(games).where(inArray(games.steamAppId, scanAppIds)) : [];
+    const cachedRows =
+      scanAppIds.length > 0 ? await db.select().from(games).where(inArray(games.steamAppId, scanAppIds)) : [];
 
-      const missRows =
-        scanAppIds.length > 0
-          ? await db
-              .select({ steamAppId: steamAppMisses.steamAppId })
-              .from(steamAppMisses)
-              .where(
-                and(
-                  inArray(steamAppMisses.steamAppId, scanAppIds),
-                  gt(steamAppMisses.checkedAt, new Date(Date.now() - STEAM_MISS_TTL_MS))
-                )
+    const missRows =
+      scanAppIds.length > 0
+        ? await db
+            .select({ steamAppId: steamAppMisses.steamAppId })
+            .from(steamAppMisses)
+            .where(
+              and(
+                inArray(steamAppMisses.steamAppId, scanAppIds),
+                gt(steamAppMisses.checkedAt, new Date(Date.now() - STEAM_MISS_TTL_MS))
               )
-          : [];
+            )
+        : [];
 
-      t.set("row_count", rankedRows.length);
-      t.set("cached_hits", cachedRows.length);
-      t.set("cached_misses", missRows.length);
-
-      return {
-        rankedIgdbIds: new Set(rankedRows.map((row) => row.igdbId)),
-        cachedByAppId: new Map(
-          cachedRows
-            .filter((row): row is Game & { steamAppId: number } => row.steamAppId !== null)
-            .map((row) => [row.steamAppId, row])
-        ),
-        freshMisses: new Set(missRows.map((row) => row.steamAppId)),
-      };
-    });
+    const rankedIgdbIds = new Set(rankedRows.map((row) => row.igdbId));
+    const cachedByAppId = new Map(
+      cachedRows
+        .filter((row): row is Game & { steamAppId: number } => row.steamAppId !== null)
+        .map((row) => [row.steamAppId, row])
+    );
+    const freshMisses = new Set(missRows.map((row) => row.steamAppId));
 
     const results: LibraryMatch[] = [];
     const seenIgdbIds = new Set<number>();
@@ -134,60 +124,46 @@ export async function GET() {
     const newMisses: number[] = [];
 
     try {
-      await withTiming(
-        "igdb.matchLibrary",
-        async (t) => {
-          let batches = 0;
-          for (
-            let start = 0;
-            start < scan.length && results.length < LIBRARY_RESULT_LIMIT;
-            start += IGDB_MULTIQUERY_MAX
-          ) {
-            const batch = scan.slice(start, start + IGDB_MULTIQUERY_MAX);
-            // Only apps this scan window hasn't already resolved (as a hit
-            // or a fresh miss) need an actual IGDB round trip.
-            const pending = batch.filter((game) => !cachedByAppId.has(game.appId) && !freshMisses.has(game.appId));
+      for (let start = 0; start < scan.length && results.length < LIBRARY_RESULT_LIMIT; start += IGDB_MULTIQUERY_MAX) {
+        const batch = scan.slice(start, start + IGDB_MULTIQUERY_MAX);
+        // Only apps this scan window hasn't already resolved (as a hit
+        // or a fresh miss) need an actual IGDB round trip.
+        const pending = batch.filter((game) => !cachedByAppId.has(game.appId) && !freshMisses.has(game.appId));
 
-            let resolved = new Map<string, IgdbGame>();
-            if (pending.length > 0) {
-              batches++;
-              resolved = await resolveGamesByName(pending.map((game) => game.name));
-              for (const steamGame of pending) {
-                const match = resolved.get(steamGame.name);
-                if (match) {
-                  newlyResolved.push({ game: match, steamAppId: steamGame.appId });
-                } else {
-                  newMisses.push(steamGame.appId);
-                }
-              }
-            }
-
-            for (const steamGame of batch) {
-              if (results.length >= LIBRARY_RESULT_LIMIT) break;
-
-              const cachedRow = cachedByAppId.get(steamGame.appId);
-              const resolvedGame = resolved.get(steamGame.name);
-              const igdbId = cachedRow?.igdbId ?? resolvedGame?.igdbId;
-              if (igdbId === undefined) continue;
-              if (rankedIgdbIds.has(igdbId)) continue;
-              // A base game and its edition (e.g. "Fallout 3" + "Fallout 3: GOTY
-              // Edition") can both resolve to the same IGDB entry. Since `scan`
-              // is playtime-sorted, the first (highest-playtime) occurrence wins.
-              if (seenIgdbIds.has(igdbId)) continue;
-
-              seenIgdbIds.add(igdbId);
-              results.push(
-                cachedRow
-                  ? gameRowToMatch(cachedRow, steamGame.playtimeForever)
-                  : igdbGameToMatch(resolvedGame as IgdbGame, steamGame.playtimeForever)
-              );
+        let resolved = new Map<string, IgdbGame>();
+        if (pending.length > 0) {
+          resolved = await resolveGamesByName(pending.map((game) => game.name));
+          for (const steamGame of pending) {
+            const match = resolved.get(steamGame.name);
+            if (match) {
+              newlyResolved.push({ game: match, steamAppId: steamGame.appId });
+            } else {
+              newMisses.push(steamGame.appId);
             }
           }
-          t.set("batches", batches);
-          t.set("matched", results.length);
-        },
-        { scan_size: scan.length }
-      );
+        }
+
+        for (const steamGame of batch) {
+          if (results.length >= LIBRARY_RESULT_LIMIT) break;
+
+          const cachedRow = cachedByAppId.get(steamGame.appId);
+          const resolvedGame = resolved.get(steamGame.name);
+          const igdbId = cachedRow?.igdbId ?? resolvedGame?.igdbId;
+          if (igdbId === undefined) continue;
+          if (rankedIgdbIds.has(igdbId)) continue;
+          // A base game and its edition (e.g. "Fallout 3" + "Fallout 3: GOTY
+          // Edition") can both resolve to the same IGDB entry. Since `scan`
+          // is playtime-sorted, the first (highest-playtime) occurrence wins.
+          if (seenIgdbIds.has(igdbId)) continue;
+
+          seenIgdbIds.add(igdbId);
+          results.push(
+            cachedRow
+              ? gameRowToMatch(cachedRow, steamGame.playtimeForever)
+              : igdbGameToMatch(resolvedGame as IgdbGame, steamGame.playtimeForever)
+          );
+        }
+      }
     } catch (err) {
       console.error("IGDB resolution failed:", err);
       return NextResponse.json({ error: "igdb_unavailable" }, { status: 502 });
@@ -208,22 +184,18 @@ export async function GET() {
       const uniqueMisses = Array.from(new Set(newMisses));
 
       try {
-        await withTiming("db.cacheSteamMatches", async (t) => {
-          if (uniqueResolved.size > 0) {
-            await upsertGames(db, Array.from(uniqueResolved.values()));
-          }
-          if (uniqueMisses.length > 0) {
-            await db
-              .insert(steamAppMisses)
-              .values(uniqueMisses.map((steamAppId) => ({ steamAppId })))
-              .onConflictDoUpdate({
-                target: steamAppMisses.steamAppId,
-                set: { checkedAt: new Date() },
-              });
-          }
-          t.set("resolved", uniqueResolved.size);
-          t.set("misses", uniqueMisses.length);
-        });
+        if (uniqueResolved.size > 0) {
+          await upsertGames(db, Array.from(uniqueResolved.values()));
+        }
+        if (uniqueMisses.length > 0) {
+          await db
+            .insert(steamAppMisses)
+            .values(uniqueMisses.map((steamAppId) => ({ steamAppId })))
+            .onConflictDoUpdate({
+              target: steamAppMisses.steamAppId,
+              set: { checkedAt: new Date() },
+            });
+        }
       } catch (err) {
         // A caching failure shouldn't turn an otherwise-successful response
         // into a 502 — worst case the next request just re-resolves.
