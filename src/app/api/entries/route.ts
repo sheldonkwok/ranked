@@ -2,7 +2,8 @@ import { and, eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { serializeEntries } from "@/app/api/_lib/entries";
 import { badRequest, withErrorHandling } from "@/app/api/_lib/handler";
-import { entries, games, getDb, type Tier } from "@/db";
+import { entries, getDb, type Tier } from "@/db";
+import { upsertGame } from "@/lib/games";
 import { getGameByIgdbId, type IgdbGame } from "@/lib/igdb";
 import { getRankedEntries, getTierEntries, insertEntry } from "@/lib/ranking";
 import { requireUser } from "@/lib/session";
@@ -97,27 +98,7 @@ export async function POST(request: NextRequest) {
 
     let alreadyRanked = false;
     await db.transaction(async (tx) => {
-      const [game] = await tx
-        .insert(games)
-        .values({
-          igdbId: igdbGame.igdbId,
-          name: igdbGame.name,
-          coverImageId: igdbGame.coverImageId,
-          firstReleaseDate: igdbGame.firstReleaseDate,
-          platforms: igdbGame.platforms,
-          summary: igdbGame.summary,
-        })
-        .onConflictDoUpdate({
-          target: games.igdbId,
-          set: {
-            name: igdbGame.name,
-            coverImageId: igdbGame.coverImageId,
-            firstReleaseDate: igdbGame.firstReleaseDate,
-            platforms: igdbGame.platforms,
-            summary: igdbGame.summary,
-          },
-        })
-        .returning();
+      const game = await upsertGame(tx, igdbGame);
 
       const [existing] = await tx
         .select({ id: entries.id })

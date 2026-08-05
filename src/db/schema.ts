@@ -41,15 +41,37 @@ export const sessions = pgTable("sessions", {
   expiresAt: timestamp("expires_at").notNull(),
 });
 
-export const games = pgTable("games", {
-  id: serial("id").primaryKey(),
-  igdbId: integer("igdb_id").notNull().unique(),
-  name: text("name").notNull(),
-  coverImageId: text("cover_image_id"),
-  firstReleaseDate: timestamp("first_release_date"),
-  platforms: jsonb("platforms").$type<string[]>(),
-  summary: text("summary"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+export const games = pgTable(
+  "games",
+  {
+    id: serial("id").primaryKey(),
+    igdbId: integer("igdb_id").notNull().unique(),
+    name: text("name").notNull(),
+    coverImageId: text("cover_image_id"),
+    firstReleaseDate: timestamp("first_release_date"),
+    platforms: jsonb("platforms").$type<string[]>(),
+    summary: text("summary"),
+    // The Steam appid this row was resolved from, cached so the /add Steam
+    // library list can skip the IGDB round trip next time. Nullable — games
+    // added via search have never been joined against Steam. Deliberately NOT
+    // unique: a base game and its edition are distinct appids that can resolve
+    // to the same IGDB game, and a unique constraint would turn that into a
+    // 500 on upsert.
+    steamAppId: integer("steam_app_id"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [index("games_steam_app_id_idx").on(table.steamAppId)]
+);
+
+// Negative cache of Steam appids that don't resolve to any IGDB game (tools,
+// SDKs, dedicated servers, soundtracks, etc.) — without this, an unresolvable
+// app sitting high in a user's playtime would cost an IGDB round trip on
+// every single /add Steam library request, forever. `checkedAt` drives a TTL
+// (see STEAM_MISS_TTL_MS in the steam-library route) so an app IGDB adds
+// later eventually gets retried instead of being cached as a miss forever.
+export const steamAppMisses = pgTable("steam_app_misses", {
+  steamAppId: integer("steam_app_id").primaryKey(),
+  checkedAt: timestamp("checked_at").notNull().defaultNow(),
 });
 
 export const entries = pgTable(
@@ -111,6 +133,9 @@ export type NewSession = typeof sessions.$inferInsert;
 
 export type Game = typeof games.$inferSelect;
 export type NewGame = typeof games.$inferInsert;
+
+export type SteamAppMiss = typeof steamAppMisses.$inferSelect;
+export type NewSteamAppMiss = typeof steamAppMisses.$inferInsert;
 
 export type Entry = typeof entries.$inferSelect;
 export type NewEntry = typeof entries.$inferInsert;

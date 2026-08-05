@@ -46,8 +46,17 @@ never entered by hand.
 
 - `users` — text UUID PK, unique `twitchId`, Twitch profile fields.
 - `sessions` — PK is the SHA-256 hex of the client token; FK to users (cascade).
-- `games` — IGDB cache: unique `igdbId`, name, cover, release date, platforms (jsonb).
+- `games` — IGDB cache: unique `igdbId`, name, cover, release date, platforms (jsonb),
+  optional `steamAppId` (indexed, not unique — an edition and its base game can share an
+  IGDB id). Set the first time a Steam library entry is joined against IGDB
+  (`api/games/steam-library`), so later requests read the join from Postgres instead of
+  re-querying IGDB. Always upsert through `upsertGame(s)` (`src/lib/games.ts`), never
+  write `games` directly — it `coalesce`s `steamAppId` so a search-add upsert can't wipe
+  out a Steam-learned value.
 - `entries` — one per user+game (unique index), with `tier`, `position`, `score`.
+- `steamAppMisses` — negative cache of Steam appids with no IGDB match (tools, SDKs,
+  soundtracks), keyed by `steamAppId` with a `checkedAt` TTL (`STEAM_MISS_TTL_MS` in
+  `api/games/steam-library`) so an app IGDB adds later eventually gets retried.
 
 ## API conventions (src/app/api/)
 
