@@ -17,7 +17,7 @@ never entered by hand.
 - Next.js 16 (App Router) + React 19 + TypeScript + Tailwind v4
 - Drizzle ORM — PGlite file DB in dev (`./dev-db`), Postgres/Supabase in prod
 - Twitch OAuth via Arctic; hand-rolled DB sessions (Lucia pattern)
-- IGDB API for game search/metadata (auth rides on the same Twitch app credentials)
+- IGDB API for game search/metadata https://api-docs.igdb.com/
 - Vitest for unit tests
 - pnpm instead of npm
 

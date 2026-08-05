@@ -140,15 +140,13 @@ const GAME_FIELDS =
 // Wider than the number of results shown client-side, since already-ranked
 // games are filtered out server-side after this fetch.
 const SEARCH_FETCH_LIMIT = 30;
-// IGDB's `search` is a fuzzy relevance index that can bury or entirely omit an
-// exact title when the query's tokens stem into a much larger franchise (e.g.
-// "The Finals" -> "final" -> the whole Final Fantasy catalog). The exact-name
-// fallback (see searchGames) is scoped to these game_types: main games,
-// bundles, standalone/expanded editions, ports, remakes, and remasters —
-// deliberately excluding DLC/expansion/episode/season/mod/pack, which is what
-// floods a naive name search for anything with a live-service tie-in.
-const NAME_MATCH_GAME_TYPES = "(0,3,4,8,9,10,11)";
-const NAME_MATCH_FETCH_LIMIT = 10;
+// Scoped to these game_types: main games, DLC, expansions, bundles,
+// standalone/expanded editions, ports, remakes, and remasters — deliberately
+// excluding episode/season/mod/pack, which is what floods a naive name search
+// for anything with a live-service tie-in (e.g. "Super Mario Odyssey
+// F.L.U.D.D.", a mod).
+const GAME_TYPES = "(0,1,2,3,4,8,9,10,11)";
+const MAX_QUERY_TOKENS = 8;
 
 function normalizeGame(raw: RawIgdbGame): IgdbGame {
   return {
@@ -178,63 +176,65 @@ function isSubstantive(game: IgdbGame): boolean {
 }
 
 /**
- * Merges IGDB's fuzzy `search` results with an exact-title name match,
- * promoting a substantive exact match to the top while otherwise preserving
- * `search`'s own relevance order. Pure and exported so it's unit-testable
- * without hitting the network — mirrors src/lib/ranking.ts.
+ * Promotes a substantive exact title match to the top (rating count desc
+ * among exact matches), otherwise preserves the API's own result order. Pure
+ * and exported so it's unit-testable without hitting the network — mirrors
+ * src/lib/ranking.ts.
  */
-export function mergeSearchResults(query: string, searchResults: IgdbGame[], nameMatches: IgdbGame[]): IgdbGame[] {
+export function mergeSearchResults(query: string, results: IgdbGame[]): IgdbGame[] {
   const normalizedQuery = query.trim().toLowerCase();
-  const searchOrder = new Map(searchResults.map((game, index) => [game.igdbId, index]));
 
-  const byId = new Map<number, IgdbGame>();
-  for (const game of [...searchResults, ...nameMatches]) {
-    if (!byId.has(game.igdbId)) byId.set(game.igdbId, game);
+  function isExactSubstantiveMatch(game: IgdbGame): boolean {
+    return game.name.trim().toLowerCase() === normalizedQuery && isSubstantive(game);
   }
 
-  function tier(game: IgdbGame): 0 | 1 | 2 {
-    const isExactMatch = game.name.trim().toLowerCase() === normalizedQuery;
-    if (isExactMatch && isSubstantive(game)) return 0;
-    if (searchOrder.has(game.igdbId)) return 1;
-    return 2;
-  }
+  const exact = results.filter(isExactSubstantiveMatch).sort((a, b) => b.totalRatingCount - a.totalRatingCount);
+  const rest = results.filter((game) => !isExactSubstantiveMatch(game));
 
-  return Array.from(byId.values()).sort((a, b) => {
-    const tierDiff = tier(a) - tier(b);
-    if (tierDiff !== 0) return tierDiff;
-
-    const aOrder = searchOrder.get(a.igdbId);
-    const bOrder = searchOrder.get(b.igdbId);
-    if (aOrder !== undefined && bOrder !== undefined) return aOrder - bOrder;
-
-    // Tiers 0 and 2 (no search order to fall back on): higher rating count first.
-    return b.totalRatingCount - a.totalRatingCount;
-  });
+  return [...exact, ...rest];
 }
 
-function hasSubstantiveExactMatch(query: string, results: IgdbGame[]): boolean {
-  const normalizedQuery = query.trim().toLowerCase();
-  return results.some((game) => game.name.trim().toLowerCase() === normalizedQuery && isSubstantive(game));
+/**
+ * Tokenizes a raw search query into the individual words used to build the
+ * per-token infix match — lowercased, whitespace-split, empties and stray
+ * `*` (which would otherwise produce a malformed `**"..."*` clause) dropped,
+ * and capped so a pathological query can't blow up the request body.
+ */
+function tokenize(query: string): string[] {
+  return query
+    .trim()
+    .toLowerCase()
+    .split(/\s+/)
+    .map((token) => token.replace(/\*/g, ""))
+    .filter((token) => token.length > 0)
+    .slice(0, MAX_QUERY_TOKENS);
 }
 
 export async function searchGames(query: string): Promise<IgdbGame[]> {
-  const escaped = escapeApicalypseString(query);
-  const searchBody = `search "${escaped}"; ${GAME_FIELDS} where version_parent = null; limit ${SEARCH_FETCH_LIMIT};`;
-  const searchResults = (await igdbRequest<RawIgdbGame[]>("games", searchBody)).map(normalizeGame);
+  const tokens = tokenize(query);
+  if (tokens.length === 0) return [];
 
-  // The re-rank (promoting a substantive exact match to the top) always runs
-  // over whatever we have. Only the second IGDB request is conditional: skip
-  // it when `search` already contains a substantive exact match somewhere in
-  // its results — even buried, mergeSearchResults will surface it — so the
-  // common case (popular titles) stays at one IGDB call.
-  if (hasSubstantiveExactMatch(query, searchResults)) {
-    return mergeSearchResults(query, searchResults, []);
-  }
+  // IGDB's `search` endpoint is a fuzzy relevance index, but it can't be
+  // combined with `sort` and isn't usable inside /multiquery (a sub-query
+  // containing `search` silently makes the *whole* multiquery return `200
+  // []`, no error, killing sibling sub-queries too — confirmed against the
+  // live API, not documented). It also has no typo tolerance, so nothing is
+  // lost by dropping it.
+  //
+  // Instead we do what IGDB recommends for autocomplete: a per-token infix
+  // match on `name` (handles token gaps like "zelda breath" -> "...Breath of
+  // the Wild" and mid-word truncation like "hollow kni" -> "Hollow Knight",
+  // neither of which `search` does), OR'd with an infix match on
+  // `alternative_names` (handles abbreviations: "cod" -> Call of Duty, "botw"
+  // -> Breath of the Wild). `sort total_rating_count desc` replaces `search`'s
+  // relevance ordering and is illegal to combine with `search` but fine with
+  // `where`. One IGDB request per search, always.
+  const nameClause = tokens.map((token) => `name ~ *"${escapeApicalypseString(token)}"*`).join(" & ");
+  const altNameClause = `alternative_names.name ~ *"${escapeApicalypseString(query.trim())}"*`;
+  const body = `${GAME_FIELDS} where ((${nameClause}) | ${altNameClause}) & version_parent = null & game_type = ${GAME_TYPES}; sort total_rating_count desc; limit ${SEARCH_FETCH_LIMIT};`;
 
-  const nameBody = `${GAME_FIELDS} where name ~ "${escaped}" & version_parent = null & game_type = ${NAME_MATCH_GAME_TYPES}; limit ${NAME_MATCH_FETCH_LIMIT};`;
-  const nameMatches = (await igdbRequest<RawIgdbGame[]>("games", nameBody)).map(normalizeGame);
-
-  return mergeSearchResults(query, searchResults, nameMatches);
+  const results = (await igdbRequest<RawIgdbGame[]>("games", body)).map(normalizeGame);
+  return mergeSearchResults(query, results);
 }
 
 export async function getGameByIgdbId(igdbId: number): Promise<IgdbGame | null> {
