@@ -231,6 +231,12 @@
   .icon-btn-gold:active {
     transform: translateY(2px);
   }
+  /* Toggled-on look for icon buttons that are a mode switch rather than a
+     one-shot action (e.g. the /add Steam library toggle) — data-state
+     mirrors the .tier-bar convention rather than a stacked modifier class. */
+  .icon-btn-gold[data-state="active"] {
+    color: var(--color-gold-pale);
+  }
   /* The Plus/Share header icons have no padding, so their hit area is
      literally the SVG's own box (24x24, 20x20) — below the 44px touch-target
      floor. Widen the tappable area on mobile without changing the icon size;

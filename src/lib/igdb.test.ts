@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { type IgdbGame, mergeSearchResults } from "./igdb";
+import {
+  type IgdbGame,
+  looseKey,
+  mergeSearchResults,
+  normalizeSteamName,
+  pickBestMatch,
+  stripEditionSuffix,
+} from "./igdb";
 
 function game(overrides: Partial<IgdbGame> & { igdbId: number; name: string }): IgdbGame {
   return {
@@ -100,5 +107,89 @@ describe("mergeSearchResults", () => {
 
   it("returns an empty list unchanged", () => {
     expect(mergeSearchResults("anything", [])).toEqual([]);
+  });
+});
+
+// Fixtures and expectations below are derived from live IGDB responses
+// captured while building the /add Steam library import — see the feature
+// plan for the raw transcript. The goal is to lock in the two real failure
+// modes found there: (1) trademark symbols/case defeating an exact match,
+// and (2) an unverified wildcard match confidently picking the wrong
+// sibling game (a miss must never turn into a wrong pick).
+describe("normalizeSteamName", () => {
+  it("strips trademark/copyright/registered symbols", () => {
+    expect(normalizeSteamName("Sid Meier's Civilization® VI")).toBe("Sid Meier's Civilization VI");
+    expect(normalizeSteamName("Call of Duty®: Modern Warfare® II")).toBe("Call of Duty: Modern Warfare II");
+    expect(normalizeSteamName("Sekiro™: Shadows Die Twice")).toBe("Sekiro: Shadows Die Twice");
+  });
+
+  it("collapses whitespace left behind by stripped symbols", () => {
+    expect(normalizeSteamName("Foo®  Bar")).toBe("Foo Bar");
+  });
+});
+
+describe("stripEditionSuffix", () => {
+  it("strips common store-page edition suffixes", () => {
+    expect(stripEditionSuffix("Sekiro: Shadows Die Twice - GOTY Edition")).toBe("Sekiro: Shadows Die Twice");
+    expect(stripEditionSuffix("Fallout 3: Game of the Year Edition")).toBe("Fallout 3");
+    expect(stripEditionSuffix("Hitman 3 - Deluxe Edition")).toBe("Hitman 3");
+    expect(stripEditionSuffix("Dying Light Enhanced Edition")).toBe("Dying Light");
+  });
+
+  it("leaves titles alone that are distinct IGDB entries, not edition wrappers", () => {
+    expect(stripEditionSuffix("Dark Souls: Remastered")).toBe("Dark Souls: Remastered");
+    expect(stripEditionSuffix("Deus Ex: Human Revolution - Director's Cut")).toBe(
+      "Deus Ex: Human Revolution - Director's Cut"
+    );
+  });
+});
+
+describe("looseKey", () => {
+  it("makes punctuation/spacing-only differences compare equal", () => {
+    expect(looseKey("NieR: Automata")).toBe(looseKey("NieR:Automata"));
+    expect(looseKey("The Elder Scrolls V: Skyrim - Special Edition")).toBe(
+      looseKey("The Elder Scrolls V: Skyrim Special Edition")
+    );
+  });
+
+  it("still distinguishes different titles", () => {
+    expect(looseKey("Civilization V")).not.toBe(looseKey("Civilization VI"));
+  });
+});
+
+describe("pickBestMatch", () => {
+  it("rejects a same-franchise sibling even when it's the top-ranked candidate", () => {
+    // Regression: wildcard search for "Civilization VI" ranks "Civilization V"
+    // first by rating count. A loose-key mismatch must reject it, not accept
+    // the top result blindly.
+    const candidates = [
+      game({ igdbId: 1, name: "Sid Meier's Civilization V", totalRatingCount: 900 }),
+      game({ igdbId: 2, name: "Sid Meier's Civilization VI", totalRatingCount: 643 }),
+    ];
+    expect(pickBestMatch("Sid Meier's Civilization® VI", candidates)?.igdbId).toBe(2);
+  });
+
+  it("rejects Modern Warfare III for a Modern Warfare II query", () => {
+    const candidates = [
+      game({ igdbId: 1, name: "Call of Duty: Modern Warfare III", totalRatingCount: 500 }),
+      game({ igdbId: 2, name: "Call of Duty: Modern Warfare II", totalRatingCount: 300 }),
+    ];
+    expect(pickBestMatch("Call of Duty®: Modern Warfare® II", candidates)?.igdbId).toBe(2);
+  });
+
+  it("returns null rather than guessing when no candidate loosely matches", () => {
+    // Regression: wildcard search for "F.E.A.R. 3" surfaced only unrelated
+    // "3"-suffixed games (e.g. "Call of Duty: Modern Warfare 3"). A miss must
+    // stay a miss, not silently become a wrong pick.
+    const candidates = [
+      game({ igdbId: 1, name: "Call of Duty: Modern Warfare 3", totalRatingCount: 500 }),
+      game({ igdbId: 2, name: "Gears of War 3", totalRatingCount: 200 }),
+    ];
+    expect(pickBestMatch("F.E.A.R. 3", candidates)).toBeNull();
+  });
+
+  it("matches through an edition suffix", () => {
+    const candidates = [game({ igdbId: 1, name: "Fallout 3", totalRatingCount: 400 })];
+    expect(pickBestMatch("Fallout 3: Game of the Year Edition", candidates)?.igdbId).toBe(1);
   });
 });

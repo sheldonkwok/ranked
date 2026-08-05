@@ -26,7 +26,7 @@ type SerializedEntry = {
   game: { id: number; igdbId: number; name: string; coverImageId: string | null; releaseYear: number | null };
 };
 
-export default function AddFlow() {
+export default function AddFlow({ steamLinked }: { steamLinked: boolean }) {
   const router = useRouter();
 
   const [phase, setPhase] = useState<Phase>("search");
@@ -194,7 +194,7 @@ export default function AddFlow() {
 
   return (
     <div className="flex flex-col gap-5">
-      {phase === "search" && <GameSearch onSelectAction={handleSelectGame} />}
+      {phase === "search" && <GameSearch onSelectAction={handleSelectGame} steamLinked={steamLinked} />}
 
       {(phase === "tier" ||
         phase === "loading-candidates" ||

@@ -18,6 +18,7 @@ never entered by hand.
 - Drizzle ORM — PGlite file DB in dev (`./dev-db`), Postgres/Supabase in prod
 - Twitch OAuth via Arctic; hand-rolled DB sessions (Lucia pattern)
 - IGDB API for game search/metadata https://api-docs.igdb.com/
+- Steam API for linking library and searching games. Refer to @docs/steam.md
 - Vitest for unit tests
 - pnpm instead of npm
 

@@ -157,3 +157,65 @@ export async function fetchSteamPlayerSummary(steamId: string): Promise<SteamPla
 export function steamProfileUrl(steamId: string): string {
   return `https://steamcommunity.com/profiles/${steamId}`;
 }
+
+/** Thrown by `fetchSteamLibrary` when `STEAM_API_KEY` isn't set — unlike the
+ * persona lookup, a library import has nothing useful to fall back to. */
+export class SteamNotConfiguredError extends Error {
+  constructor() {
+    super("STEAM_API_KEY is not configured");
+  }
+}
+
+export type SteamOwnedGame = {
+  appId: number;
+  name: string;
+  playtimeForever: number; // minutes
+};
+
+type SteamOwnedGamesResponse = {
+  response: {
+    game_count?: number;
+    games?: Array<{ appid: number; name?: string; playtime_forever?: number }>;
+  };
+};
+
+/**
+ * Fetches a Steam account's owned games via `IPlayerService/GetOwnedGames`,
+ * sorted by all-time playtime descending (most-played first).
+ *
+ * Returns `[]` for a private/friends-only profile — Steam answers with an
+ * empty `response` object (no `games` key) rather than an error in that
+ * case, so there's nothing to distinguish from "no games" here.
+ *
+ * Throws `SteamNotConfiguredError` if `STEAM_API_KEY` is unset, and rethrows
+ * on any other fetch/parse failure — unlike `fetchSteamPlayerSummary`, this
+ * is the whole point of the call, so there's no silent degrade.
+ */
+export async function fetchSteamLibrary(steamId: string): Promise<SteamOwnedGame[]> {
+  const apiKey = process.env.STEAM_API_KEY;
+  if (!apiKey) throw new SteamNotConfiguredError();
+
+  const url = new URL(`${STEAM_API_BASE}/IPlayerService/GetOwnedGames/v0001/`);
+  url.searchParams.set("key", apiKey);
+  url.searchParams.set("steamid", steamId);
+  url.searchParams.set("include_appinfo", "true");
+  url.searchParams.set("include_played_free_games", "true");
+  url.searchParams.set("format", "json");
+
+  const res = await fetch(url.toString(), { cache: "no-store" });
+  if (!res.ok) {
+    throw new Error(`Steam GetOwnedGames failed (status ${res.status})`);
+  }
+
+  const body = (await res.json()) as SteamOwnedGamesResponse;
+  const games = body.response.games ?? [];
+
+  return games
+    .map((game) => ({
+      appId: game.appid,
+      name: game.name ?? "",
+      playtimeForever: game.playtime_forever ?? 0,
+    }))
+    .filter((game) => game.name.length > 0)
+    .sort((a, b) => b.playtimeForever - a.playtimeForever);
+}

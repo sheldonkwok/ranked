@@ -245,3 +245,125 @@ export async function getGameByIgdbId(igdbId: number): Promise<IgdbGame | null> 
   const results = await igdbRequest<RawIgdbGame[]>("games", body);
   return results.length > 0 ? normalizeGame(results[0]) : null;
 }
+
+// --- Steam library name resolution -----------------------------------------
+//
+// Steam library titles and IGDB titles frequently disagree — trademark
+// symbols, roman-numeral vs. arabic-numeral sequels, and store-page edition
+// suffixes are all common. Resolving a batch of Steam names to IGDB games is
+// a two-pass process, tuned against the live API (see the /add Steam library
+// plan for the raw test transcript this is derived from):
+//
+//   1. An exact-ish pass: `name ~ "..."` (case-insensitive equality, not a
+//      substring match) OR'd with an `alternative_names` hit, which recovers
+//      most renames ("PLAYERUNKNOWN'S BATTLEGROUNDS" -> "PUBG: Battlegrounds",
+//      "Baldur's Gate 3" -> "Baldur's Gate III"). ~17/18 real Steam titles
+//      matched this way in testing.
+//   2. A wildcard fallback, but ONLY as a *candidate generator* re-verified
+//      by `pickBestMatch` — token-wildcard search alone silently picks the
+//      wrong sibling game far too often (`sort total_rating_count desc` will
+//      confidently return "Civilization V" for a "Civilization VI" query,
+//      "Modern Warfare III" for "Modern Warfare II", etc.), so an unverified
+//      top-1 wildcard match is worse than no match at all here.
+
+/** IGDB's /multiquery endpoint rejects request bodies with more than 10 sub-queries. */
+export const IGDB_MULTIQUERY_MAX = 10;
+
+const TRADEMARK_SYMBOL_PATTERN = /[™®©]/g;
+
+/** Strips trademark/copyright symbols and collapses whitespace left behind. */
+export function normalizeSteamName(name: string): string {
+  return name.replace(TRADEMARK_SYMBOL_PATTERN, "").replace(/\s+/g, " ").trim();
+}
+
+// Store-page edition suffixes that wrap an otherwise-identical base game on
+// IGDB. Deliberately excludes "Remastered" / "Remake" / "Director's Cut" —
+// those are distinct IGDB entries from the base game, not the same one
+// (verified: "Dark Souls: Remastered" and "Deus Ex: Human Revolution -
+// Director's Cut" both resolve fine as their full titles).
+const EDITION_SUFFIX_PATTERN =
+  /\s*[-–:]?\s*\b(game of the year|goty|definitive|enhanced|complete|deluxe|ultimate|gold|anniversary|standard)\b\s*edition\s*$/i;
+
+/** Strips a trailing store-page edition suffix, e.g. "Fallout 3: Game of the Year Edition" -> "Fallout 3". */
+export function stripEditionSuffix(name: string): string {
+  return name.replace(EDITION_SUFFIX_PATTERN, "").trim();
+}
+
+/** Lowercased, non-alphanumeric-stripped comparison key — "NieR: Automata" and "NieR:Automata" collapse to the same key. */
+export function looseKey(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+/**
+ * Picks the candidate (already sorted by relevance/rating by the caller's
+ * query) whose loose key exactly matches the Steam name — either as given or
+ * with its edition suffix stripped. Returns null rather than guessing when
+ * no candidate loosely matches, since a wrong match here is worse than a
+ * miss (it would silently rank the wrong game).
+ */
+export function pickBestMatch(steamName: string, candidates: IgdbGame[]): IgdbGame | null {
+  const normalized = normalizeSteamName(steamName);
+  const acceptableKeys = new Set([looseKey(normalized), looseKey(stripEditionSuffix(normalized))]);
+  return candidates.find((candidate) => acceptableKeys.has(looseKey(candidate.name))) ?? null;
+}
+
+type MultiquerySubResult = { name: string; result: RawIgdbGame[] };
+
+/**
+ * Resolves a batch of Steam library titles to IGDB games in at most two
+ * `/multiquery` round trips total, regardless of batch size. `names.length`
+ * must not exceed `IGDB_MULTIQUERY_MAX` — batch upstream of this call.
+ *
+ * Returns a Map keyed by the *original* input string (not normalized), with
+ * unresolved names simply absent — callers should treat a missing entry as
+ * "no confident IGDB match", not as an error.
+ */
+export async function resolveGamesByName(names: string[]): Promise<Map<string, IgdbGame>> {
+  if (names.length === 0) return new Map();
+  if (names.length > IGDB_MULTIQUERY_MAX) {
+    throw new Error(`resolveGamesByName: got ${names.length} names, max is ${IGDB_MULTIQUERY_MAX}`);
+  }
+
+  const resolved = new Map<string, IgdbGame>();
+
+  // Pass 1: exact-ish (case-insensitive) name/alternative_names match.
+  const exactQueries = names.map((name, i) => {
+    const escaped = escapeApicalypseString(normalizeSteamName(name));
+    return `query games "q${i}" { ${GAME_FIELDS} where (name ~ "${escaped}" | alternative_names.name ~ "${escaped}") & version_parent = null & game_type = ${GAME_TYPES}; sort total_rating_count desc; limit 1; };`;
+  });
+  const exactResults = await igdbRequest<MultiquerySubResult[]>("multiquery", exactQueries.join("\n"));
+
+  const missIndexes: number[] = [];
+  for (let i = 0; i < names.length; i++) {
+    const raw = exactResults.find((r) => r.name === `q${i}`)?.result ?? [];
+    if (raw.length > 0) {
+      resolved.set(names[i], normalizeGame(raw[0]));
+    } else {
+      missIndexes.push(i);
+    }
+  }
+
+  if (missIndexes.length === 0) return resolved;
+
+  // Pass 2: wildcard candidate generation + verified pick, for pass-1 misses only.
+  const fallbackQueries = missIndexes.map((i) => {
+    const base = stripEditionSuffix(normalizeSteamName(names[i]));
+    const tokens = tokenize(base);
+    const nameClause =
+      tokens.length > 0
+        ? tokens.map((token) => `name ~ *"${escapeApicalypseString(token)}"*`).join(" & ")
+        : `name ~ *"${escapeApicalypseString(base)}"*`;
+    const altClause = `alternative_names.name ~ *"${escapeApicalypseString(base)}"*`;
+    return `query games "q${i}" { ${GAME_FIELDS} where ((${nameClause}) | ${altClause}) & version_parent = null & game_type = ${GAME_TYPES}; sort total_rating_count desc; limit 8; };`;
+  });
+  const fallbackResults = await igdbRequest<MultiquerySubResult[]>("multiquery", fallbackQueries.join("\n"));
+
+  for (const i of missIndexes) {
+    const raw = fallbackResults.find((r) => r.name === `q${i}`)?.result ?? [];
+    const candidates = raw.map(normalizeGame);
+    const best = pickBestMatch(names[i], candidates);
+    if (best) resolved.set(names[i], best);
+  }
+
+  return resolved;
+}
