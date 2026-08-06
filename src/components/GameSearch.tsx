@@ -1,6 +1,7 @@
 "use client";
 
-import { Cog } from "lucide-react";
+import { Cog, X } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import CoverImage from "@/components/CoverImage";
 import Banner from "@/components/ui/Banner";
@@ -29,6 +30,12 @@ type SteamState =
   | { kind: "loading" }
   | { kind: "error"; message: string }
   | { kind: "results"; results: SteamLibraryResult[] };
+
+type RelatedState =
+  | { kind: "idle" }
+  | { kind: "loading" }
+  | { kind: "error"; message: string }
+  | { kind: "results"; results: GameSearchResult[] };
 
 const MIN_QUERY_LENGTH = 2;
 const DEBOUNCE_MS = 300;
@@ -84,14 +91,19 @@ function GameResultRow({
 export default function GameSearch({
   onSelectAction,
   steamLinked,
+  relatedTo,
 }: {
   onSelectAction: (game: GameSearchResult) => void;
   steamLinked: boolean;
+  /** Game name from `?related=`, if any — locks the box into "related" mode on mount. */
+  relatedTo: string | null;
 }) {
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [state, setState] = useState<SearchState>({ kind: "idle" });
-  const [mode, setMode] = useState<"search" | "steam">("search");
+  const [mode, setMode] = useState<"search" | "steam" | "related">(relatedTo ? "related" : "search");
   const [steamState, setSteamState] = useState<SteamState>({ kind: "idle" });
+  const [relatedState, setRelatedState] = useState<RelatedState>({ kind: "idle" });
   const requestIdRef = useRef(0);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -219,14 +231,76 @@ export default function GameSearch({
       setMode("search");
       return;
     }
+    // Leaving related mode for Steam mode: drop `?related=` so backing out of
+    // Steam mode later (or re-mounting) doesn't silently re-lock into related.
+    if (mode === "related") {
+      router.replace("/add", { scroll: false });
+    }
     setMode("steam");
     if (steamState.kind === "idle") {
       runSteamFetch();
     }
   }
 
+  const runRelatedFetch = useCallback(async (name: string) => {
+    setRelatedState({ kind: "loading" });
+
+    try {
+      const res = await fetch(`/api/games/similar?name=${encodeURIComponent(name)}`);
+
+      if (res.status === 404) {
+        setRelatedState({
+          kind: "error",
+          message: "That game isn't in your ranking anymore.",
+        });
+        return;
+      }
+
+      if (res.status === 502) {
+        setRelatedState({
+          kind: "error",
+          message: "Similar games are unavailable right now. Try again.",
+        });
+        return;
+      }
+
+      if (!res.ok) {
+        setRelatedState({
+          kind: "error",
+          message: "Something went wrong finding similar games. Try again.",
+        });
+        return;
+      }
+
+      const data = (await res.json()) as { results: GameSearchResult[] };
+      setRelatedState({ kind: "results", results: data.results });
+    } catch {
+      setRelatedState({
+        kind: "error",
+        message: "Something went wrong finding similar games. Try again.",
+      });
+    }
+  }, []);
+
+  // Fetch once on mount when the box opens directly into related mode via
+  // `?related=`. There's no toggle button to re-trigger this (unlike Steam
+  // mode's cog) — the box only ever enters related mode from the URL.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally mount-only — relatedTo/runRelatedFetch don't change in a way that should re-trigger this
+  useEffect(() => {
+    if (relatedTo) {
+      runRelatedFetch(relatedTo);
+    }
+  }, []);
+
+  // Unlocks the box back to a plain search and clears `?related=` so backing
+  // out of a later screen (which re-mounts this component) doesn't re-lock.
+  function handleExitRelated() {
+    setMode("search");
+    router.replace("/add", { scroll: false });
+  }
+
   // Re-focus the (now re-enabled) input whenever we land back on search mode,
-  // including the toggle-back from Steam library mode.
+  // including the toggle-back from Steam library or related-games mode.
   useEffect(() => {
     if (mode === "search") inputRef.current?.focus();
   }, [mode]);
@@ -241,12 +315,28 @@ export default function GameSearch({
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder={mode === "steam" ? "STEAM LIBRARY" : "SEARCH A TITLE"}
-            disabled={mode === "steam"}
+            placeholder={
+              mode === "steam"
+                ? "STEAM LIBRARY"
+                : mode === "related"
+                  ? `GAMES LIKE ${relatedTo?.toUpperCase()}`
+                  : "SEARCH A TITLE"
+            }
+            disabled={mode !== "search"}
             // biome-ignore lint/a11y/noAutofocus: this is the sole control on a dedicated /add search step, not a page loaded incidentally
             autoFocus
             className="flex-1 bg-transparent py-1 text-[17px] tracking-[1px] text-ink outline-none placeholder:text-ink-placeholder disabled:opacity-50"
           />
+          {mode === "related" && (
+            <button
+              type="button"
+              onClick={handleExitRelated}
+              className="icon-btn-gold flex items-center"
+              aria-label="Clear related game filter"
+            >
+              <X size={20} strokeWidth={2.5} aria-hidden="true" />
+            </button>
+          )}
           {steamLinked && (
             <button
               type="button"
@@ -261,9 +351,9 @@ export default function GameSearch({
           )}
         </div>
         <p className="text-xs tracking-[0.5px] text-ink-faint">
-          {mode === "steam"
-            ? "Your most-played Steam games you haven't ranked yet."
-            : "Results appear as you type — press Enter to search now."}
+          {mode === "steam" && "Your most-played Steam games you haven't ranked yet."}
+          {mode === "related" && `Games similar to ${relatedTo} that you haven't ranked yet.`}
+          {mode === "search" && "Results appear as you type — press Enter to search now."}
         </p>
       </form>
 
@@ -321,6 +411,24 @@ export default function GameSearch({
               rightLabel={formatPlaytime(game.playtimeForever)}
               onSelect={() => onSelectAction(game)}
             />
+          ))}
+        </ul>
+      )}
+
+      {mode === "related" && relatedState.kind === "loading" && <PixelLoader label="Finding similar games…" />}
+
+      {mode === "related" && relatedState.kind === "error" && <Banner variant="error">{relatedState.message}</Banner>}
+
+      {mode === "related" && relatedState.kind === "results" && relatedState.results.length === 0 && (
+        <div className="pixel-panel px-10 py-10 text-center text-[14px] tracking-[1px] text-ink-faint">
+          NOTHING SIMILAR LEFT
+        </div>
+      )}
+
+      {mode === "related" && relatedState.kind === "results" && relatedState.results.length > 0 && (
+        <ul className="pixel-panel flex flex-col p-1.5">
+          {relatedState.results.map((game) => (
+            <GameResultRow key={game.igdbId} game={game} onSelect={() => onSelectAction(game)} />
           ))}
         </ul>
       )}

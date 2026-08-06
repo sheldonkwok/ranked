@@ -5,6 +5,7 @@ import {
   mergeSearchResults,
   normalizeSteamName,
   pickBestMatch,
+  sortByIdOrder,
   stripEditionSuffix,
 } from "./igdb";
 
@@ -191,5 +192,37 @@ describe("pickBestMatch", () => {
   it("matches through an edition suffix", () => {
     const candidates = [game({ igdbId: 1, name: "Fallout 3", totalRatingCount: 400 })];
     expect(pickBestMatch("Fallout 3: Game of the Year Edition", candidates)?.igdbId).toBe(1);
+  });
+});
+
+// `getSimilarGames` fetches `similar_games` ids from IGDB, then a second
+// `where id = (...)` request for the full records — which comes back in
+// arbitrary order. sortByIdOrder restores IGDB's own relevance ordering.
+describe("sortByIdOrder", () => {
+  it("reorders games to match the id list", () => {
+    const games = [
+      game({ igdbId: 3, name: "Third" }),
+      game({ igdbId: 1, name: "First" }),
+      game({ igdbId: 2, name: "Second" }),
+    ];
+
+    expect(sortByIdOrder(games, [1, 2, 3]).map((g) => g.igdbId)).toEqual([1, 2, 3]);
+  });
+
+  it("drops ids with no matching game", () => {
+    // e.g. filtered out by the game_type allowlist in the second request.
+    const games = [game({ igdbId: 1, name: "First" }), game({ igdbId: 3, name: "Third" })];
+
+    expect(sortByIdOrder(games, [1, 2, 3]).map((g) => g.igdbId)).toEqual([1, 3]);
+  });
+
+  it("ignores games not present in the id list", () => {
+    const games = [game({ igdbId: 1, name: "First" }), game({ igdbId: 99, name: "Unrelated" })];
+
+    expect(sortByIdOrder(games, [1]).map((g) => g.igdbId)).toEqual([1]);
+  });
+
+  it("returns an empty list for an empty id list", () => {
+    expect(sortByIdOrder([game({ igdbId: 1, name: "First" })], [])).toEqual([]);
   });
 });

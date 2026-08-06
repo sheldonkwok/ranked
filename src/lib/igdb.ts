@@ -246,6 +246,44 @@ export async function getGameByIgdbId(igdbId: number): Promise<IgdbGame | null> 
   return results.length > 0 ? normalizeGame(results[0]) : null;
 }
 
+// Wider than SIMILAR_RESULT_LIMIT in the API route, since already-ranked
+// games are filtered out server-side after this fetch.
+const SIMILAR_FETCH_LIMIT = 20;
+
+type RawSimilarGames = { id: number; similar_games?: number[] | null };
+
+/**
+ * Restores `games` to the order of `ids` (IGDB's own `similar_games`
+ * relevance ordering) — a `where id = (...)` fetch returns rows in
+ * arbitrary order. Ids with no matching game (filtered out by game_type,
+ * or simply absent from the response) are skipped. Pure and exported so
+ * it's unit-testable without hitting the network.
+ */
+export function sortByIdOrder(games: IgdbGame[], ids: number[]): IgdbGame[] {
+  const byId = new Map(games.map((game) => [game.igdbId, game]));
+  return ids.map((id) => byId.get(id)).filter((game): game is IgdbGame => game !== undefined);
+}
+
+/**
+ * Games IGDB considers similar to `igdbId`, in IGDB's own relevance order.
+ * `similar_games` only returns bare ids, so this is two requests: one for
+ * the id list, one to fetch full records for those ids (filtered by the
+ * same game_type allowlist as search, and re-sorted to match the id order).
+ */
+export async function getSimilarGames(igdbId: number): Promise<IgdbGame[]> {
+  if (!Number.isInteger(igdbId) || igdbId <= 0) {
+    throw new Error(`getSimilarGames: igdbId must be a positive integer, got ${igdbId}`);
+  }
+
+  const idRows = await igdbRequest<RawSimilarGames[]>("games", `fields similar_games; where id = ${igdbId}; limit 1;`);
+  const ids = idRows[0]?.similar_games ?? [];
+  if (ids.length === 0) return [];
+
+  const body = `${GAME_FIELDS} where id = (${ids.join(",")}) & version_parent = null & game_type = ${GAME_TYPES}; limit ${SIMILAR_FETCH_LIMIT};`;
+  const games = (await igdbRequest<RawIgdbGame[]>("games", body)).map(normalizeGame);
+  return sortByIdOrder(games, ids);
+}
+
 // --- Steam library name resolution -----------------------------------------
 //
 // Steam library titles and IGDB titles frequently disagree — trademark
