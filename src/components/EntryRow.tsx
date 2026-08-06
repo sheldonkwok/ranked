@@ -1,7 +1,17 @@
 import Link from "next/link";
 import CoverImage from "@/components/CoverImage";
+import {
+  entryCover,
+  entryLink,
+  entryLinkFocus,
+  entryName,
+  entryRank,
+  entryRowGrid,
+  entryYear,
+} from "@/components/entryRowStyles";
 import ScoreButton from "@/components/ScoreButton";
 import ScoreChip from "@/components/ScoreChip";
+import { row as rowRecipe } from "@/components/ui/surface";
 import type { Tier } from "@/db/schema";
 
 export type EntryRowProps = {
@@ -16,8 +26,7 @@ export type EntryRowProps = {
   readOnly?: boolean;
 };
 
-// The cover + title, shared between the read-only `<div>` and the linked
-// `<a>` wrapping it below so both variants share the same markup/geometry.
+// The cover + title, shared between the read-only `<div>` and the linked `<a>` below so both variants share the same markup/geometry.
 function EntryCoverAndTitle({
   coverImageId,
   name,
@@ -34,13 +43,13 @@ function EntryCoverAndTitle({
         size="cover_small"
         width={42}
         height={56}
-        className="entry-cover shrink-0 border border-edge/45"
+        className={`${entryCover} shrink-0 border border-edge/45`}
       />
-      <div className="entry-title min-w-0">
-        <p className="entry-name text-ink" style={{ textShadow: "0 2px 4px rgba(0,0,0,0.9)" }}>
+      <div className="min-w-0">
+        <p className={`${entryName} text-ink`} style={{ textShadow: "0 2px 4px rgba(0,0,0,0.9)" }}>
           {name}
         </p>
-        {releaseYear !== null && <p className="entry-year tracking-[1px] text-ink-dim">{releaseYear}</p>}
+        {releaseYear !== null && <p className={`${entryYear} tracking-[1px] text-ink-dim`}>{releaseYear}</p>}
       </div>
     </>
   );
@@ -57,29 +66,26 @@ export default function EntryRow({
   readOnly = false,
 }: EntryRowProps) {
   return (
-    <li className="entry-row-grid pixel-row items-center">
-      <span
-        className="entry-rank font-pixel text-center text-gold-bright"
-        style={{ textShadow: "0 2px 3px rgba(0,0,0,0.9)" }}
-      >
+    <li className={`${entryRowGrid} ${rowRecipe()} items-center`}>
+      <span className={`${entryRank} font-pixel text-gold-bright`} style={{ textShadow: "0 2px 3px rgba(0,0,0,0.9)" }}>
         {String(rank).padStart(2, "0")}
       </span>
 
       {readOnly ? (
-        <div className="entry-link">
+        <div className={entryLink}>
           <EntryCoverAndTitle coverImageId={coverImageId} name={name} releaseYear={releaseYear} />
         </div>
       ) : (
         <Link
           href={`/add?related=${encodeURIComponent(name)}`}
-          className="entry-link"
+          className={`${entryLink} ${entryLinkFocus}`}
           aria-label={`Find games like ${name}`}
         >
           <EntryCoverAndTitle coverImageId={coverImageId} name={name} releaseYear={releaseYear} />
         </Link>
       )}
 
-      <div className="entry-meta flex items-center">
+      <div className="flex items-center">
         {readOnly ? (
           <ScoreChip tier={tier} score={score} />
         ) : (

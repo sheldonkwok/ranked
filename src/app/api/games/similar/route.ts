@@ -23,9 +23,7 @@ export async function GET(request: NextRequest) {
       .innerJoin(games, eq(entries.gameId, games.id))
       .where(eq(entries.userId, user.id));
 
-    // Scoped to the user's own ranked games — `games.name` isn't globally
-    // unique, but it's effectively unique within one person's ranking, and
-    // "games like this" only makes sense for something already ranked.
+    // Scoped to the user's own ranked games — games.name isn't globally unique but is effectively unique per user, and "similar" only makes sense for something already ranked.
     const target =
       rankedRows.find((row) => row.name === name) ??
       rankedRows.find((row) => row.name.toLowerCase() === name.toLowerCase());

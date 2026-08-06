@@ -1,11 +1,4 @@
-// Server-only IGDB API client.
-//
-// IGDB (https://api-docs.igdb.com) is authenticated via a Twitch app's
-// client-credentials OAuth flow. This module fetches and caches a Twitch
-// access token in memory and uses it to issue Apicalypse-flavored requests
-// against api.igdb.com.
-//
-// This file must never be imported from client components/bundles.
+// Server-only IGDB API client, authenticated via a Twitch app's client-credentials OAuth flow (https://api-docs.igdb.com).
 if (typeof window !== "undefined") {
   throw new Error("igdb.ts is server-only");
 }
@@ -13,8 +6,7 @@ if (typeof window !== "undefined") {
 const TWITCH_TOKEN_URL = "https://id.twitch.tv/oauth2/token";
 const IGDB_API_BASE = "https://api.igdb.com/v4";
 
-// How long before actual expiry we treat a cached token as stale, so we
-// don't hand IGDB a token that dies mid-flight.
+// How long before actual expiry we treat a cached token as stale, so we don't hand IGDB a token that dies mid-flight.
 const TOKEN_REFRESH_SKEW_MS = 60_000;
 
 type TokenCache = {
@@ -100,8 +92,7 @@ async function igdbRequest<T>(endpoint: string, body: string): Promise<T> {
   let res = await performIgdbFetch(endpoint, body, accessToken);
 
   if (res.status === 401) {
-    // Token may have been revoked or expired early — invalidate the cache,
-    // fetch a brand new token, and retry exactly once.
+    // Token may have been revoked or expired early — invalidate, fetch a fresh one, and retry exactly once.
     tokenCache = null;
     const refreshedToken = await getAccessToken(true);
     res = await performIgdbFetch(endpoint, body, refreshedToken);
@@ -137,14 +128,9 @@ type RawIgdbGame = {
 
 const GAME_FIELDS =
   "fields name, cover.image_id, first_release_date, platforms.abbreviation, summary, total_rating_count;";
-// Wider than the number of results shown client-side, since already-ranked
-// games are filtered out server-side after this fetch.
+// Wider than the number of results shown client-side, since already-ranked games are filtered out server-side after this fetch.
 const SEARCH_FETCH_LIMIT = 30;
-// Scoped to these game_types: main games, DLC, expansions, bundles,
-// standalone/expanded editions, ports, remakes, and remasters — deliberately
-// excluding episode/season/mod/pack, which is what floods a naive name search
-// for anything with a live-service tie-in (e.g. "Super Mario Odyssey
-// F.L.U.D.D.", a mod).
+// Main games, DLC, expansions, bundles, editions, ports, remakes, remasters — excludes episode/season/mod/pack, which floods naive search.
 const GAME_TYPES = "(0,1,2,3,4,8,9,10,11)";
 const MAX_QUERY_TOKENS = 8;
 
@@ -164,23 +150,12 @@ function escapeApicalypseString(value: string): string {
   return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 }
 
-/**
- * An exact match is "substantive" if it looks like a real, known game rather
- * than an obscure same-titled entry (IGDB has, for example, a bare "Zelda"
- * with no cover and no ratings — promoting every exact match unconditionally
- * would rank it above "The Legend of Zelda"). Requiring both a cover and at
- * least one rating is a cheap, effective filter for that.
- */
+/** A cheap filter for "looks like a real, known game" — requiring a cover and a rating keeps a bare "Zelda" from outranking "The Legend of Zelda". */
 function isSubstantive(game: IgdbGame): boolean {
   return game.coverImageId !== null && game.totalRatingCount > 0;
 }
 
-/**
- * Promotes a substantive exact title match to the top (rating count desc
- * among exact matches), otherwise preserves the API's own result order. Pure
- * and exported so it's unit-testable without hitting the network — mirrors
- * src/lib/ranking.ts.
- */
+/** Promotes a substantive exact title match to the top (rating desc among exact matches), otherwise preserves the API's own order. */
 export function mergeSearchResults(query: string, results: IgdbGame[]): IgdbGame[] {
   const normalizedQuery = query.trim().toLowerCase();
 
@@ -194,12 +169,7 @@ export function mergeSearchResults(query: string, results: IgdbGame[]): IgdbGame
   return [...exact, ...rest];
 }
 
-/**
- * Tokenizes a raw search query into the individual words used to build the
- * per-token infix match — lowercased, whitespace-split, empties and stray
- * `*` (which would otherwise produce a malformed `**"..."*` clause) dropped,
- * and capped so a pathological query can't blow up the request body.
- */
+/** Tokenizes a query into words for the per-token infix match — lowercased, whitespace-split, stray `*` stripped, capped at MAX_QUERY_TOKENS. */
 function tokenize(query: string): string[] {
   return query
     .trim()
@@ -214,21 +184,7 @@ export async function searchGames(query: string): Promise<IgdbGame[]> {
   const tokens = tokenize(query);
   if (tokens.length === 0) return [];
 
-  // IGDB's `search` endpoint is a fuzzy relevance index, but it can't be
-  // combined with `sort` and isn't usable inside /multiquery (a sub-query
-  // containing `search` silently makes the *whole* multiquery return `200
-  // []`, no error, killing sibling sub-queries too — confirmed against the
-  // live API, not documented). It also has no typo tolerance, so nothing is
-  // lost by dropping it.
-  //
-  // Instead we do what IGDB recommends for autocomplete: a per-token infix
-  // match on `name` (handles token gaps like "zelda breath" -> "...Breath of
-  // the Wild" and mid-word truncation like "hollow kni" -> "Hollow Knight",
-  // neither of which `search` does), OR'd with an infix match on
-  // `alternative_names` (handles abbreviations: "cod" -> Call of Duty, "botw"
-  // -> Breath of the Wild). `sort total_rating_count desc` replaces `search`'s
-  // relevance ordering and is illegal to combine with `search` but fine with
-  // `where`. One IGDB request per search, always.
+  // IGDB's `search` can't combine with `sort` or /multiquery (undocumented — silently kills the whole batch), so instead we do per-token infix matching on `name` OR'd with `alternative_names`, ordered by `sort total_rating_count desc`.
   const nameClause = tokens.map((token) => `name ~ *"${escapeApicalypseString(token)}"*`).join(" & ");
   const altNameClause = `alternative_names.name ~ *"${escapeApicalypseString(query.trim())}"*`;
   const body = `${GAME_FIELDS} where ((${nameClause}) | ${altNameClause}) & version_parent = null & game_type = ${GAME_TYPES}; sort total_rating_count desc; limit ${SEARCH_FETCH_LIMIT};`;
@@ -246,30 +202,18 @@ export async function getGameByIgdbId(igdbId: number): Promise<IgdbGame | null> 
   return results.length > 0 ? normalizeGame(results[0]) : null;
 }
 
-// Wider than SIMILAR_RESULT_LIMIT in the API route, since already-ranked
-// games are filtered out server-side after this fetch.
+// Wider than SIMILAR_RESULT_LIMIT in the API route, since already-ranked games are filtered out server-side after this fetch.
 const SIMILAR_FETCH_LIMIT = 20;
 
 type RawSimilarGames = { id: number; similar_games?: number[] | null };
 
-/**
- * Restores `games` to the order of `ids` (IGDB's own `similar_games`
- * relevance ordering) — a `where id = (...)` fetch returns rows in
- * arbitrary order. Ids with no matching game (filtered out by game_type,
- * or simply absent from the response) are skipped. Pure and exported so
- * it's unit-testable without hitting the network.
- */
+/** Restores `games` to the order of `ids` (a `where id = (...)` fetch returns arbitrary order); ids with no match are skipped. */
 export function sortByIdOrder(games: IgdbGame[], ids: number[]): IgdbGame[] {
   const byId = new Map(games.map((game) => [game.igdbId, game]));
   return ids.map((id) => byId.get(id)).filter((game): game is IgdbGame => game !== undefined);
 }
 
-/**
- * Games IGDB considers similar to `igdbId`, in IGDB's own relevance order.
- * `similar_games` only returns bare ids, so this is two requests: one for
- * the id list, one to fetch full records for those ids (filtered by the
- * same game_type allowlist as search, and re-sorted to match the id order).
- */
+/** Games IGDB considers similar to `igdbId`, in relevance order — two requests: the id list, then full records re-sorted to match. */
 export async function getSimilarGames(igdbId: number): Promise<IgdbGame[]> {
   if (!Number.isInteger(igdbId) || igdbId <= 0) {
     throw new Error(`getSimilarGames: igdbId must be a positive integer, got ${igdbId}`);
@@ -284,25 +228,7 @@ export async function getSimilarGames(igdbId: number): Promise<IgdbGame[]> {
   return sortByIdOrder(games, ids);
 }
 
-// --- Steam library name resolution -----------------------------------------
-//
-// Steam library titles and IGDB titles frequently disagree — trademark
-// symbols, roman-numeral vs. arabic-numeral sequels, and store-page edition
-// suffixes are all common. Resolving a batch of Steam names to IGDB games is
-// a two-pass process, tuned against the live API (see the /add Steam library
-// plan for the raw test transcript this is derived from):
-//
-//   1. An exact-ish pass: `name ~ "..."` (case-insensitive equality, not a
-//      substring match) OR'd with an `alternative_names` hit, which recovers
-//      most renames ("PLAYERUNKNOWN'S BATTLEGROUNDS" -> "PUBG: Battlegrounds",
-//      "Baldur's Gate 3" -> "Baldur's Gate III"). ~17/18 real Steam titles
-//      matched this way in testing.
-//   2. A wildcard fallback, but ONLY as a *candidate generator* re-verified
-//      by `pickBestMatch` — token-wildcard search alone silently picks the
-//      wrong sibling game far too often (`sort total_rating_count desc` will
-//      confidently return "Civilization V" for a "Civilization VI" query,
-//      "Modern Warfare III" for "Modern Warfare II", etc.), so an unverified
-//      top-1 wildcard match is worse than no match at all here.
+// Steam library name resolution: Steam and IGDB titles frequently disagree, so resolving a Steam name is two passes — an exact-ish `name`/`alternative_names` match, then a wildcard fallback used only as a candidate generator re-verified by `pickBestMatch` (an unverified top-1 pick is worse than no match).
 
 /** IGDB's /multiquery endpoint rejects request bodies with more than 10 sub-queries. */
 export const IGDB_MULTIQUERY_MAX = 10;
@@ -314,11 +240,7 @@ export function normalizeSteamName(name: string): string {
   return name.replace(TRADEMARK_SYMBOL_PATTERN, "").replace(/\s+/g, " ").trim();
 }
 
-// Store-page edition suffixes that wrap an otherwise-identical base game on
-// IGDB. Deliberately excludes "Remastered" / "Remake" / "Director's Cut" —
-// those are distinct IGDB entries from the base game, not the same one
-// (verified: "Dark Souls: Remastered" and "Deus Ex: Human Revolution -
-// Director's Cut" both resolve fine as their full titles).
+// Store-page edition suffixes that wrap an otherwise-identical base game on IGDB — excludes "Remastered"/"Remake"/"Director's Cut", which are distinct IGDB entries.
 const EDITION_SUFFIX_PATTERN =
   /\s*[-–:]?\s*\b(game of the year|goty|definitive|enhanced|complete|deluxe|ultimate|gold|anniversary|standard)\b\s*edition\s*$/i;
 
@@ -332,13 +254,7 @@ export function looseKey(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
-/**
- * Picks the candidate (already sorted by relevance/rating by the caller's
- * query) whose loose key exactly matches the Steam name — either as given or
- * with its edition suffix stripped. Returns null rather than guessing when
- * no candidate loosely matches, since a wrong match here is worse than a
- * miss (it would silently rank the wrong game).
- */
+/** Picks the candidate whose loose key exactly matches the Steam name (as given or edition-stripped); null rather than a risky guess. */
 export function pickBestMatch(steamName: string, candidates: IgdbGame[]): IgdbGame | null {
   const normalized = normalizeSteamName(steamName);
   const acceptableKeys = new Set([looseKey(normalized), looseKey(stripEditionSuffix(normalized))]);
@@ -347,15 +263,7 @@ export function pickBestMatch(steamName: string, candidates: IgdbGame[]): IgdbGa
 
 type MultiquerySubResult = { name: string; result: RawIgdbGame[] };
 
-/**
- * Resolves a batch of Steam library titles to IGDB games in at most two
- * `/multiquery` round trips total, regardless of batch size. `names.length`
- * must not exceed `IGDB_MULTIQUERY_MAX` — batch upstream of this call.
- *
- * Returns a Map keyed by the *original* input string (not normalized), with
- * unresolved names simply absent — callers should treat a missing entry as
- * "no confident IGDB match", not as an error.
- */
+/** Resolves a batch of Steam titles to IGDB games in at most two `/multiquery` round trips; unresolved names are simply absent from the result Map. */
 export async function resolveGamesByName(names: string[]): Promise<Map<string, IgdbGame>> {
   if (names.length === 0) return new Map();
   if (names.length > IGDB_MULTIQUERY_MAX) {

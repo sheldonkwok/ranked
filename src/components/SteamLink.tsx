@@ -1,14 +1,12 @@
 import Image from "next/image";
+import { button } from "@/components/ui/button";
 import { steamProfileUrl } from "@/lib/steam";
 
 type SteamLinkProps = {
   steamId: string | null;
   steamPersonaName: string | null;
   steamAvatarUrl: string | null;
-  // False when Steam is this account's only identity — unlinking would trip
-  // the users_identity_required check (src/db/schema.ts) and lock the user
-  // out, so the unlink route already refuses it; hiding the button here is
-  // just to not offer an action that will bounce back with an error.
+  // False when Steam is this account's only identity — unlinking would trip the users_identity_required check and lock the user out (the unlink route already refuses it; this just avoids offering an action that would bounce).
   canUnlink: boolean;
 };
 
@@ -35,7 +33,7 @@ export default function SteamLink({ steamId, steamPersonaName, steamAvatarUrl, c
           </a>
           {canUnlink ? (
             <form method="post" action="/api/auth/steam/unlink">
-              <button type="submit" className="pixel-btn-ghost pixel-btn-ghost-danger">
+              <button type="submit" className={button({ variant: "ghost", tone: "danger" })}>
                 UNLINK
               </button>
             </form>
@@ -44,7 +42,7 @@ export default function SteamLink({ steamId, steamPersonaName, steamAvatarUrl, c
           )}
         </div>
       ) : (
-        <a href="/api/auth/steam" className="pixel-btn text-center">
+        <a href="/api/auth/steam" className={button({ variant: "nav", className: "text-center" })}>
           CONNECT STEAM
         </a>
       )}

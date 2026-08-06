@@ -64,8 +64,7 @@ describe("upsertGame / upsertGames", () => {
   it("upserting without a steamAppId leaves an existing steam_app_id intact", async () => {
     await upsertGames(db, [{ game: makeIgdbGame(), steamAppId: 367520 }]);
 
-    // Simulates the search-add path (POST /api/entries), which never
-    // supplies a steamAppId — it must not wipe out the cached one.
+    // Simulates the search-add path (POST /api/entries), which never supplies a steamAppId and must not wipe out the cached one.
     await upsertGame(db, makeIgdbGame({ summary: "Refreshed via search." }));
 
     const row = await findByIgdbId(1);

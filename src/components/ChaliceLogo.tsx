@@ -1,9 +1,4 @@
-// Chalice-flame sprite: 16x16 pixel grid, 4 animation frames. Only the flame
-// rows (0-2) vary between frames; the chalice body (rows 3-15) is identical in
-// all four, so it's rendered once and never touched — the mark doesn't wobble
-// as a unit. The frame cycle itself is driven by CSS (`.chalice-flame-*` /
-// `@keyframes chalice-flame-*` in ./ChaliceLogo.css), not JS — keep the two in
-// sync if the pixel data here ever changes.
+// Chalice-flame sprite: 16x16 grid, 4 frames — only flame rows (0-2) vary, so the chalice body is rendered once; frame cycling is driven by CSS (`.chalice-flame-*`/`@keyframes` in ./ChaliceLogo.css), not JS, so keep the two in sync.
 import "./ChaliceLogo.css";
 
 const PALETTE: Record<string, string> = {

@@ -9,8 +9,8 @@ O(log n) comparisons. Scores (0–10) are derived from position within per-tier 
 never entered by hand.
 
 ## Rules
-- Never git commit
-
+- Never git commit unless you're the cloud agent
+- Maximum one line comments. Do not have several consecutive lines
 
 ## Stack
 
@@ -21,6 +21,7 @@ never entered by hand.
 - Steam API for linking library and searching games. Refer to @docs/steam.md
 - Vitest for unit tests
 - pnpm instead of npm
+- CSS cva
 
 ## Commands
 

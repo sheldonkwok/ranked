@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import CoverImage from "@/components/CoverImage";
 import Banner from "@/components/ui/Banner";
+import { iconButton } from "@/components/ui/button";
 import PixelLoader from "@/components/ui/PixelLoader";
+import { panel, row } from "@/components/ui/surface";
 
 export type GameSearchResult = {
   igdbId: number;
@@ -60,7 +62,9 @@ function GameResultRow({
       <button
         type="button"
         onClick={onSelect}
-        className="pixel-row grid w-full items-center gap-4 p-[11px_14px] text-left mobile:gap-3 mobile:p-[9px_12px]"
+        className={row({
+          className: "grid w-full items-center gap-4 p-[11px_14px] text-left mobile:gap-3 mobile:p-[9px_12px]",
+        })}
         style={{ gridTemplateColumns: "42px 1fr auto" }}
       >
         <CoverImage
@@ -150,16 +154,12 @@ export default function GameSearch({
   useEffect(() => {
     const trimmed = query.trim();
 
-    // Too short to search: leave any prior search state untouched (it's
-    // simply not rendered below while the query is short) rather than
-    // resetting it synchronously here.
+    // Too short to search: leave prior search state untouched (it's simply not rendered while the query is short) rather than resetting it synchronously here.
     if (trimmed.length < MIN_QUERY_LENGTH) {
       return;
     }
 
-    // Hold the timer in a local so the cleanup cancels *this* effect's timer
-    // rather than whatever happens to be in the ref by then. The ref exists
-    // only so `handleSubmit` can cancel a still-pending debounce.
+    // Hold the timer in a local so cleanup cancels *this* effect's timer rather than whatever's in the ref by then; the ref exists only so `handleSubmit` can cancel a still-pending debounce.
     const timer = setTimeout(() => {
       debounceRef.current = null;
       runSearch(trimmed);
@@ -224,15 +224,13 @@ export default function GameSearch({
     }
   }, []);
 
-  // Fetch the library once per mount (the first time the cog is opened) —
-  // toggling back to search and reopening it just re-shows the cached state.
+  // Fetch the library once per mount (first time the cog opens) — toggling back to search and reopening just re-shows the cached state.
   function handleToggleSteam() {
     if (mode === "steam") {
       setMode("search");
       return;
     }
-    // Leaving related mode for Steam mode: drop `?related=` so backing out of
-    // Steam mode later (or re-mounting) doesn't silently re-lock into related.
+    // Leaving related mode for Steam mode: drop `?related=` so backing out later (or re-mounting) doesn't silently re-lock into related.
     if (mode === "related") {
       router.replace("/add", { scroll: false });
     }
@@ -282,9 +280,7 @@ export default function GameSearch({
     }
   }, []);
 
-  // Fetch once on mount when the box opens directly into related mode via
-  // `?related=`. There's no toggle button to re-trigger this (unlike Steam
-  // mode's cog) — the box only ever enters related mode from the URL.
+  // Fetch once on mount when the box opens directly into related mode via `?related=` — there's no toggle to re-trigger this (unlike Steam mode's cog).
   // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally mount-only — relatedTo/runRelatedFetch don't change in a way that should re-trigger this
   useEffect(() => {
     if (relatedTo) {
@@ -292,15 +288,13 @@ export default function GameSearch({
     }
   }, []);
 
-  // Unlocks the box back to a plain search and clears `?related=` so backing
-  // out of a later screen (which re-mounts this component) doesn't re-lock.
+  // Unlocks the box back to plain search and clears `?related=` so backing out of a later screen (which re-mounts this component) doesn't re-lock.
   function handleExitRelated() {
     setMode("search");
     router.replace("/add", { scroll: false });
   }
 
-  // Re-focus the (now re-enabled) input whenever we land back on search mode,
-  // including the toggle-back from Steam library or related-games mode.
+  // Re-focus the (now re-enabled) input whenever we land back on search mode, including toggle-back from Steam library or related-games mode.
   useEffect(() => {
     if (mode === "search") inputRef.current?.focus();
   }, [mode]);
@@ -308,7 +302,7 @@ export default function GameSearch({
   return (
     <div className="flex flex-col gap-4">
       <form onSubmit={handleSubmit} className="flex flex-col gap-1.5">
-        <div className="pixel-panel flex items-center gap-3 px-4 py-3">
+        <div className={panel({ className: "flex items-center gap-3 px-4 py-3" })}>
           <span className="font-pixel text-[10px] text-gold-bright">&gt;</span>
           <input
             ref={inputRef}
@@ -331,7 +325,7 @@ export default function GameSearch({
             <button
               type="button"
               onClick={handleExitRelated}
-              className="icon-btn-gold flex items-center"
+              className={iconButton({ className: "flex items-center" })}
               aria-label="Clear related game filter"
             >
               <X size={20} strokeWidth={2.5} aria-hidden="true" />
@@ -341,7 +335,7 @@ export default function GameSearch({
             <button
               type="button"
               onClick={handleToggleSteam}
-              className="icon-btn-gold flex items-center"
+              className={iconButton({ className: "flex items-center" })}
               data-state={mode === "steam" ? "active" : undefined}
               aria-pressed={mode === "steam"}
               aria-label="Steam library"
@@ -361,9 +355,7 @@ export default function GameSearch({
         <p className="text-sm text-ink-dim">Keep typing ({MIN_QUERY_LENGTH}+ characters)…</p>
       )}
 
-      {/* Once the query drops below the minimum length, the effect stops
-          updating `state`, so we gate all of its branches on the current
-          query length here rather than resetting state synchronously. */}
+      {/* Once the query drops below the minimum length, the effect stops updating `state`, so we gate all its branches on the current query length here instead of resetting synchronously. */}
       {mode === "search" && trimmedQuery.length >= MIN_QUERY_LENGTH && state.kind === "loading" && (
         <PixelLoader label="Searching…" />
       )}
@@ -376,7 +368,7 @@ export default function GameSearch({
         trimmedQuery.length >= MIN_QUERY_LENGTH &&
         state.kind === "results" &&
         state.results.length === 0 && (
-          <div className="pixel-panel px-10 py-10 text-center text-[14px] tracking-[1px] text-ink-faint">
+          <div className={panel({ className: "px-10 py-10 text-center text-[14px] tracking-[1px] text-ink-faint" })}>
             NO CARTRIDGES FOUND
           </div>
         )}
@@ -385,7 +377,7 @@ export default function GameSearch({
         trimmedQuery.length >= MIN_QUERY_LENGTH &&
         state.kind === "results" &&
         state.results.length > 0 && (
-          <ul className="pixel-panel flex flex-col p-1.5">
+          <ul className={panel({ className: "flex flex-col p-1.5" })}>
             {state.results.map((game) => (
               <GameResultRow key={game.igdbId} game={game} onSelect={() => onSelectAction(game)} />
             ))}
@@ -397,13 +389,13 @@ export default function GameSearch({
       {mode === "steam" && steamState.kind === "error" && <Banner variant="error">{steamState.message}</Banner>}
 
       {mode === "steam" && steamState.kind === "results" && steamState.results.length === 0 && (
-        <div className="pixel-panel px-10 py-10 text-center text-[14px] tracking-[1px] text-ink-faint">
+        <div className={panel({ className: "px-10 py-10 text-center text-[14px] tracking-[1px] text-ink-faint" })}>
           NOTHING LEFT TO RANK
         </div>
       )}
 
       {mode === "steam" && steamState.kind === "results" && steamState.results.length > 0 && (
-        <ul className="pixel-panel flex flex-col p-1.5">
+        <ul className={panel({ className: "flex flex-col p-1.5" })}>
           {steamState.results.map((game) => (
             <GameResultRow
               key={game.igdbId}
@@ -420,13 +412,13 @@ export default function GameSearch({
       {mode === "related" && relatedState.kind === "error" && <Banner variant="error">{relatedState.message}</Banner>}
 
       {mode === "related" && relatedState.kind === "results" && relatedState.results.length === 0 && (
-        <div className="pixel-panel px-10 py-10 text-center text-[14px] tracking-[1px] text-ink-faint">
+        <div className={panel({ className: "px-10 py-10 text-center text-[14px] tracking-[1px] text-ink-faint" })}>
           NOTHING SIMILAR LEFT
         </div>
       )}
 
       {mode === "related" && relatedState.kind === "results" && relatedState.results.length > 0 && (
-        <ul className="pixel-panel flex flex-col p-1.5">
+        <ul className={panel({ className: "flex flex-col p-1.5" })}>
           {relatedState.results.map((game) => (
             <GameResultRow key={game.igdbId} game={game} onSelect={() => onSelectAction(game)} />
           ))}

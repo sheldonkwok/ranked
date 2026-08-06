@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import AddHotkey from "@/components/AddHotkey";
 import RankedList from "@/components/RankedList";
 import Toast from "@/components/Toast";
+import { panel } from "@/components/ui/surface";
 import { getDb } from "@/db";
 import { getRankedEntries } from "@/lib/ranking";
 import { getCurrentUser } from "@/lib/session";
@@ -33,7 +34,9 @@ export default async function Home({ searchParams }: HomePageProps) {
   if (entries.length === 0) {
     return (
       <div className="flex flex-col items-center py-16 text-center">
-        <div className="pixel-panel px-12 py-10 text-[14px] tracking-[1px] text-ink-faint">NO GAMES RANKED YET</div>
+        <div className={panel({ className: "px-12 py-10 text-[14px] tracking-[1px] text-ink-faint" })}>
+          NO GAMES RANKED YET
+        </div>
         {toast && <Toast message={toast} />}
         <AddHotkey />
       </div>

@@ -26,13 +26,7 @@ export type ComparisonAction =
   | { type: "choose"; newGameWins: boolean }
   | { type: "reset" };
 
-/**
- * Binary-search state machine shared by the add-game flow and (later) the
- * re-rank flow. `candidates` must be pre-sorted best -> worst. Search
- * invariant: everything in [0, lo) beats the new game, everything in
- * [hi, n) loses to the new game; the new game belongs at index `lo` once
- * `lo >= hi`.
- */
+/** Binary-search state machine (shared by add-game and re-rank flows) over a best -> worst sorted `candidates` list: [0, lo) beats the new game, [hi, n) loses to it, and the new game belongs at `lo` once `lo >= hi`. */
 export function createInitialState(candidates: ComparisonCandidate[] | null): ComparisonState {
   const list = candidates ?? [];
   return {
@@ -58,8 +52,7 @@ export function comparisonReducer(state: ComparisonState, action: ComparisonActi
       }
 
       const mid = Math.floor((state.lo + state.hi) / 2);
-      // newGameWins → the new game ranks better than candidates[mid], so
-      // the answer lies in [lo, mid]; otherwise it lies in [mid+1, hi).
+      // newGameWins narrows to [lo, mid] (new game beat candidates[mid]); otherwise narrows to [mid+1, hi).
       const nextLo = action.newGameWins ? state.lo : mid + 1;
       const nextHi = action.newGameWins ? mid : state.hi;
 
@@ -89,20 +82,11 @@ export type UseComparisonRankingResult = {
   finalPosition: number | null;
 };
 
-/**
- * Drives a binary-search "which do you like more?" comparison loop over a
- * best -> worst sorted candidate list to find the insertion index for a new
- * item. Re-initializes whenever the `candidates` reference/identity changes
- * (pass a new array, e.g. from a fresh fetch, to start a new round).
- */
+/** Drives the binary-search comparison loop to find a new item's insertion index; re-initializes whenever the `candidates` array reference changes. */
 export function useComparisonRanking(candidates: ComparisonCandidate[] | null): UseComparisonRankingResult {
   const [state, dispatch] = useReducer(comparisonReducer, candidates, createInitialState);
 
-  // Re-sync whenever the caller hands us a new `candidates` array
-  // reference (e.g. after fetching a different tier), following React's
-  // "adjusting state during render" pattern instead of an effect so the
-  // reset is visible in the same commit. Callers should pass a stable
-  // array reference until they intend to restart the search.
+  // Re-syncs on a new `candidates` reference via React's "adjust state during render" pattern (not an effect) so the reset lands in the same commit; callers must keep the reference stable otherwise.
   const [prevCandidates, setPrevCandidates] = useState(candidates);
   if (candidates !== prevCandidates) {
     setPrevCandidates(candidates);

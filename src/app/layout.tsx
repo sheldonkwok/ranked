@@ -3,6 +3,7 @@ import { VT323 } from "next/font/google";
 import Link from "next/link";
 import ChaliceLogo from "@/components/ChaliceLogo";
 import HeaderActions from "@/components/HeaderActions";
+import { heading } from "@/components/ui/surface";
 import { getCurrentUser } from "@/lib/session";
 import "./globals.css";
 
@@ -35,8 +36,7 @@ export const metadata: Metadata = {
   },
 };
 
-// Matches --color-bg, so mobile browser chrome (status bar / URL bar) blends
-// with the app instead of defaulting to white.
+// Matches --color-bg, so mobile browser chrome blends with the app instead of defaulting to white.
 export const viewport: Viewport = {
   themeColor: "#05070f",
 };
@@ -82,7 +82,7 @@ export default async function RootLayout({
               <Link href="/" className="flex items-center gap-3.5 mobile:gap-2">
                 <ChaliceLogo className="block h-8 w-8" />
                 <span
-                  className="pixel-heading ml-1.5 text-[20px] tracking-[1px]"
+                  className={heading({ className: "ml-1.5 text-[20px] tracking-[1px]" })}
                   style={{ textShadow: "0 2px 4px rgba(0,0,0,0.9)" }}
                 >
                   RANKED

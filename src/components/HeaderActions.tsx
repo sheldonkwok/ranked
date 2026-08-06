@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import ShareButton from "@/components/ShareButton";
+import { iconButton } from "@/components/ui/button";
 
 export default function HeaderActions({
   username,
@@ -16,9 +17,7 @@ export default function HeaderActions({
   avatarUrl: string | null;
 }) {
   const pathname = usePathname();
-  // Public ranking pages (/u/*) are for viewing, not authoring — hide the
-  // rank/share actions there even for a signed-in visitor. The avatar/
-  // settings link stays so they can still navigate back to their own account.
+  // Public ranking pages (/u/*) are for viewing, not authoring — hide rank/share actions there, but keep the avatar/settings link so visitors can still reach their own account.
   const onPublicProfile = pathname.startsWith("/u/");
 
   return (
@@ -29,7 +28,7 @@ export default function HeaderActions({
             href="/add"
             aria-label="Rank a game"
             title="Rank a game (A)"
-            className="icon-btn-gold flex items-center"
+            className={iconButton({ className: "flex items-center" })}
           >
             <Plus size={24} strokeWidth={2.5} aria-hidden="true" />
           </Link>
@@ -48,11 +47,7 @@ export default function HeaderActions({
         ) : (
           <div className="cover-hatch h-6 w-6 border border-edge/60" />
         )}
-        {/* The name is the only elastic element in the header — hide it
-            below 360px, where the header would otherwise overflow. The
-            avatar alone still links to /settings. Prefer displayName: a
-            Steam-only account's username defaults to "steam-<id>", which
-            displayName (the Steam persona) is far more readable than. */}
+        {/* The name is the only elastic header element — hide it below 360px to avoid overflow (avatar alone still links to /settings); prefer displayName since a Steam-only account's username defaults to unreadable "steam-<id>". */}
         <span className="text-[13px] text-ink-muted mobile-xs:hidden">{displayName ?? username}</span>
       </Link>
     </div>

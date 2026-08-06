@@ -17,27 +17,12 @@ function settingsRedirect(request: NextRequest, twitch: "linked" | "error" | "ta
   return NextResponse.redirect(url);
 }
 
-/** True when `err` is a Postgres unique-violation on the given constraint —
- * both the prod (postgres.js) and dev (PGlite) drivers surface it as a real
- * embedded-Postgres error whose message names the constraint. */
+/** True when err is a Postgres unique-violation on the given constraint (both prod and dev drivers surface it as an error whose message names the constraint). */
 function isUniqueViolation(err: unknown, constraint: string): boolean {
   return err instanceof Error && err.message.includes(constraint);
 }
 
-/**
- * Signs a Twitch user in: upserts by `twitchId` (creating the account on
- * first sign-in, refreshing profile fields on every one after), and returns
- * the row to start a session for.
- *
- * A cosmetic username collision must never block sign-in — Twitch logins are
- * unique on Twitch's own side, so this only fires when the desired username
- * happens to match an unrelated Steam-only account's `steam-<id>` default
- * (see `users_username_lower_unique`, src/db/schema.ts). If the colliding
- * row is *this* user's own (a returning user whose login changed into a name
- * already taken by someone else — can't happen given Twitch's own
- * uniqueness, but defended anyway), the existing username is kept. If it's a
- * genuinely new signup, the username is disambiguated instead of failing.
- */
+/** Signs a Twitch user in via upsert by twitchId; on a username collision (only possible against an unrelated Steam-only account's steam-<id> default) keeps the existing username for a returning user or disambiguates a new signup, since a cosmetic collision must never block sign-in. */
 async function upsertTwitchSignIn(db: Db, twitchUser: TwitchHelixUser) {
   const baseValues = {
     twitchId: twitchUser.id,
@@ -63,8 +48,7 @@ async function upsertTwitchSignIn(db: Db, twitchUser: TwitchHelixUser) {
   } catch (err) {
     if (!isUniqueViolation(err, "users_username_lower_unique")) throw err;
 
-    // Row already exists (that's what put us on the ON CONFLICT path) —
-    // update everything except the colliding username.
+    // Row already exists (hit the ON CONFLICT path) — update everything except the colliding username.
     const [existing] = await db
       .update(users)
       .set({ displayName: twitchUser.display_name, avatarUrl: twitchUser.profile_image_url })
@@ -72,8 +56,7 @@ async function upsertTwitchSignIn(db: Db, twitchUser: TwitchHelixUser) {
       .returning();
     if (existing) return existing;
 
-    // No existing row: a brand-new signup whose Twitch login collides with
-    // an unrelated account's username. Disambiguate rather than fail.
+    // No existing row — brand-new signup colliding with an unrelated username; disambiguate rather than fail.
     const [inserted] = await db
       .insert(users)
       .values({ ...baseValues, username: `${twitchUser.login}-${twitchUser.id}` })
@@ -88,8 +71,7 @@ export async function GET(request: NextRequest) {
 
   const cookieStore = await cookies();
   const storedState = cookieStore.get(STATE_COOKIE_NAME)?.value ?? null;
-  // One-time use: clear the state cookie as soon as we've read it, whether
-  // or not the flow ultimately succeeds.
+  // One-time use: clear the state cookie immediately, regardless of whether the flow succeeds.
   cookieStore.delete(STATE_COOKIE_NAME);
 
   if (!code || !state || !storedState || state !== storedState) {
@@ -103,10 +85,7 @@ export async function GET(request: NextRequest) {
 
     const db = await getDb();
 
-    // A signed-in Steam-only account hitting this route is linking Twitch,
-    // not signing in as someone else — otherwise this would silently upsert
-    // a brand-new account and switch the session to it, orphaning whatever
-    // the user had already ranked under their Steam account.
+    // A signed-in Steam-only account here is linking Twitch, not switching accounts — otherwise this would silently upsert a new account and orphan their Steam-ranked entries.
     const current = await getCurrentUser();
     if (current && !current.twitchId) {
       const taken = await db.select({ id: users.id }).from(users).where(eq(users.twitchId, twitchUser.id));
@@ -115,8 +94,7 @@ export async function GET(request: NextRequest) {
       }
 
       try {
-        // Promote the username from the Steam-derived default to the Twitch
-        // login now that the account has a human-chosen handle.
+        // Promote the username from the Steam-derived default to the Twitch login, now that a human-chosen handle exists.
         await db
           .update(users)
           .set({
@@ -128,8 +106,7 @@ export async function GET(request: NextRequest) {
           .where(eq(users.id, current.id));
       } catch (err) {
         if (!isUniqueViolation(err, "users_username_lower_unique")) throw err;
-        // Desired username belongs to an unrelated account — link Twitch
-        // without renaming rather than failing the whole link.
+        // Desired username belongs to an unrelated account — link Twitch without renaming rather than failing.
         await db
           .update(users)
           .set({ twitchId: twitchUser.id, avatarUrl: twitchUser.profile_image_url })

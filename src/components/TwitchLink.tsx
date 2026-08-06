@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { button } from "@/components/ui/button";
 
 type TwitchLinkProps = {
   twitchId: string | null;
@@ -6,9 +7,7 @@ type TwitchLinkProps = {
   avatarUrl: string | null;
 };
 
-// Mirrors SteamLink.tsx. Twitch has no unlink route — it's never the identity
-// being removed here, since a Steam-only account promotes straight to
-// "has both", and there's no product need yet to go the other way.
+// Mirrors SteamLink.tsx; Twitch has no unlink route since a Steam-only account promotes straight to "has both" with no product need to go the other way.
 export default function TwitchLink({ twitchId, username, avatarUrl }: TwitchLinkProps) {
   return (
     <div className="flex w-full flex-col gap-3 border-t border-edge/35 pt-6">
@@ -24,7 +23,7 @@ export default function TwitchLink({ twitchId, username, avatarUrl }: TwitchLink
           <span className="text-sm text-ink-muted">@{username}</span>
         </div>
       ) : (
-        <a href="/api/auth/twitch" className="pixel-btn text-center">
+        <a href="/api/auth/twitch" className={button({ variant: "nav", className: "text-center" })}>
           CONNECT TWITCH
         </a>
       )}

@@ -1,11 +1,4 @@
-// Shared helpers for JSON API route handlers under src/app/api.
-//
-// Every route wraps its logic in `withErrorHandling`, which maps the two
-// "expected" failure modes callers throw/return to consistent JSON
-// responses (401 for unauthenticated requests, and any explicit
-// `ApiError` a handler throws for validation/not-found/upstream failures),
-// and otherwise logs + 500s so unexpected bugs don't leak internals to
-// clients.
+// Shared helpers for JSON API routes: withErrorHandling maps UnauthorizedError to 401 and ApiError to its status, and otherwise logs + 500s so bugs don't leak internals.
 import { NextResponse } from "next/server";
 import { UnauthorizedError } from "@/lib/session";
 

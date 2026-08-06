@@ -1,8 +1,4 @@
-// Shared response serialization for the `entries` JSON API surface, used by
-// GET /api/entries, POST /api/entries, PATCH /api/entries/[id]/rerank, and
-// DELETE /api/entries/[id] — they all respond with (a view of) the same
-// ranked-entry list shape so the client can refresh its state in one
-// round trip.
+// Shared response serialization for the entries API surface — all entry mutation routes return the same ranked-entry list shape so the client can refresh in one round trip.
 import type { RankedEntry } from "@/lib/ranking";
 import { releaseYearOf } from "./handler";
 

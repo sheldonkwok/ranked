@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { heading } from "@/components/ui/surface";
 import { getCurrentUser } from "@/lib/session";
 import AddFlow from "./AddFlow";
 
@@ -16,7 +17,7 @@ export default async function AddPage({ searchParams }: AddPageProps) {
 
   return (
     <div className="mx-auto flex max-w-[660px] flex-col gap-5">
-      <h1 className="pixel-heading text-[18px]">ADD A GAME</h1>
+      <h1 className={heading({ className: "text-[18px]" })}>ADD A GAME</h1>
       <AddFlow steamLinked={Boolean(user?.steamId)} relatedTo={related?.trim() || null} />
     </div>
   );

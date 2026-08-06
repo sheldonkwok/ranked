@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Banner from "@/components/ui/Banner";
+import { heading, panel } from "@/components/ui/surface";
 import { getCurrentUser } from "@/lib/session";
 
 export const metadata: Metadata = {
@@ -21,9 +22,9 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
 
   return (
     <div className="flex min-h-[70vh] items-center justify-center">
-      <div className="pixel-panel flex w-full max-w-sm flex-col items-center gap-6 px-8 py-10 text-center">
+      <div className={panel({ className: "flex w-full max-w-sm flex-col items-center gap-6 px-8 py-10 text-center" })}>
         <div className="flex flex-col items-center gap-2">
-          <h1 className="pixel-heading text-[20px]">RANKED</h1>
+          <h1 className={heading({ className: "text-[20px]" })}>RANKED</h1>
           <p className="text-sm tracking-[1px] text-ink-dim">Rank every game you&apos;ve played</p>
         </div>
 

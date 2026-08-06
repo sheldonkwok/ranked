@@ -1,6 +1,4 @@
-// Server-only Twitch OAuth client (Arctic).
-//
-// This file must never be imported from client components/bundles.
+// Server-only Twitch OAuth client (Arctic) — must never be imported from client components/bundles.
 if (typeof window !== "undefined") {
   throw new Error("auth.ts is server-only");
 }
@@ -9,17 +7,7 @@ import { Twitch } from "arctic";
 
 let twitchClient: Twitch | null = null;
 
-/**
- * Lazily constructs (and memoizes) the Arctic Twitch OAuth2 client.
- *
- * Lazy on purpose: constructing eagerly at module-eval time would throw as
- * soon as this file is imported whenever TWITCH_CLIENT_ID/
- * TWITCH_CLIENT_SECRET/APP_URL aren't set (e.g. during `tsc --noEmit`, CI,
- * or any route that merely imports a sibling module). Deferring the env
- * check to first call means the app still builds/typechecks without
- * `.env.local`, and only the actual OAuth routes fail (loudly) if
- * misconfigured.
- */
+/** Lazily constructs (and memoizes) the Arctic Twitch OAuth2 client, so the app still builds/typechecks without env vars set. */
 export function getTwitchClient(): Twitch {
   if (twitchClient) return twitchClient;
 
@@ -45,13 +33,7 @@ export type TwitchHelixUser = {
   profile_image_url: string;
 };
 
-/**
- * Fetches the authenticated user's profile from the Twitch Helix API using
- * an Arctic-issued OAuth access token.
- *
- * Helix requires both the bearer token *and* the app's Client-Id header —
- * the access token alone isn't enough to identify which app is calling.
- */
+/** Fetches the authenticated user's profile from Twitch Helix; requires both the bearer token and the app's Client-Id header. */
 export async function fetchTwitchUser(accessToken: string): Promise<TwitchHelixUser> {
   const clientId = process.env.TWITCH_CLIENT_ID;
   if (!clientId) {

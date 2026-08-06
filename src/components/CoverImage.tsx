@@ -1,15 +1,8 @@
 import Image from "next/image";
+import { cn } from "@/lib/cn";
 import { type CoverSize, coverUrl } from "@/lib/cover";
 
-// Shared cover-art renderer used anywhere a game's box art shows up
-// (ranked list rows, search results, tier/comparison cards). Handles the
-// missing-cover case consistently with a neutral placeholder box.
-//
-// Pass `width`/`height` to render via `next/image` (for on-page, above-the-
-// fold usage where optimization is worth it, e.g. the ranked list). Omit
-// them to render a plain `<img>` that fills its container — useful when the
-// container's size comes from a fluid class (e.g. `aspect-[3/4]`) rather
-// than fixed pixel dimensions next/image requires.
+// Shared cover-art renderer with a placeholder for missing covers; pass `width`/`height` to render via `next/image` (above-the-fold usage), or omit them for a plain `<img>` that fills a fluid container.
 type CoverImageProps = {
   coverImageId: string | null;
   size?: CoverSize;
@@ -28,7 +21,7 @@ export default function CoverImage({
   alt = "",
 }: CoverImageProps) {
   return (
-    <div className={`overflow-hidden ${className}`}>
+    <div className={cn("overflow-hidden", className)}>
       {coverImageId ? (
         width !== undefined && height !== undefined ? (
           <Image

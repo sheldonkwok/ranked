@@ -3,17 +3,11 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { buildSteamAuthUrl, getAppUrl } from "@/lib/steam";
 
-// Short-lived, single-use cookie that ties the callback request back to the
-// request that started it (CSRF protection). Steam's OpenID flow has no
-// `state` param of its own, so we carry one in the `return_to` URL instead
-// and stash the expected value here — same pattern as `twitch_oauth_state`.
+// Short-lived, single-use cookie for CSRF protection — Steam's OpenID has no state param, so we carry one in return_to and stash the expected value here (same pattern as twitch_oauth_state).
 const STATE_COOKIE_NAME = "steam_openid_state";
 const STATE_COOKIE_MAX_AGE_SECONDS = 60 * 10; // 10 minutes
 
-// No auth guard here, unlike the old link-only version of this route: Steam
-// is now also a sign-in method. Whether this becomes a "sign in" or a "link
-// to my account" is decided in the callback, by whether a session already
-// exists there (src/app/api/auth/steam/callback/route.ts).
+// No auth guard — Steam is now a sign-in method too; sign-in vs. link-to-account is decided in the callback by whether a session already exists.
 export async function GET() {
   const appUrl = getAppUrl();
   const state = generateState();

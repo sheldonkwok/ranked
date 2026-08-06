@@ -2,6 +2,7 @@
 
 import { Check, Share2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { iconButton } from "@/components/ui/button";
 
 const CONFIRM_MS = 1600;
 
@@ -21,8 +22,7 @@ export default function ShareButton({ username }: { username: string }) {
       await navigator.clipboard.writeText(url);
       setCopied(true);
     } catch {
-      // Clipboard access can fail (e.g. non-secure origin, denied permission)
-      // — leave the icon as-is rather than claiming a copy that didn't happen.
+      // Clipboard access can fail (e.g. non-secure origin, denied permission) — leave the icon as-is rather than claiming a copy that didn't happen.
     }
   }
 
@@ -31,7 +31,7 @@ export default function ShareButton({ username }: { username: string }) {
       type="button"
       onClick={handleClick}
       aria-label="Copy link to your ranking"
-      className="icon-btn-gold flex items-center"
+      className={iconButton({ className: "flex items-center" })}
     >
       {copied ? (
         <Check size={20} strokeWidth={2.5} aria-hidden="true" />

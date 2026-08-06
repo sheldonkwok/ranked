@@ -6,24 +6,10 @@ import * as schema from "./schema";
 
 export * from "./schema";
 
-/**
- * Union of the two drizzle database flavors we support:
- *  - PgliteDatabase, backed by a file-persisted PGlite instance, for local dev
- *  - PostgresJsDatabase, backed by postgres-js, for prod (Supabase Postgres)
- *
- * Both extend PgDatabase with a different QueryResultHKT, so we keep them as
- * a union rather than trying to force a single generic type. Callers that
- * only use the common Drizzle query builder API (select/insert/update/delete/
- * transaction) work fine against this union.
- */
+/** Union of PgliteDatabase (local dev) and PostgresJsDatabase (prod) — kept as a union rather than a shared generic since they differ only in QueryResultHKT. */
 export type Db = PgliteDatabase<typeof schema> | PostgresJsDatabase<typeof schema>;
 
-/**
- * Shared transaction type, derived structurally from Db['transaction'] so it
- * stays in sync with whichever driver is active at runtime. Verified to
- * typecheck against both drivers (see scripts/db-check.ts usage during
- * development).
- */
+/** Shared transaction type, derived structurally from Db['transaction'] so it stays in sync with whichever driver is active. */
 export type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 
 declare global {
@@ -49,13 +35,7 @@ async function initDb(): Promise<Db> {
   return db;
 }
 
-/**
- * Returns the singleton database instance, running local-dev migrations on
- * first access. The instance and its init promise are cached on globalThis
- * so that Next.js dev-server HMR (which re-evaluates this module on every
- * edit) doesn't spin up a second PGlite pointing at the same dataDir --
- * PGlite only supports a single process/instance per data directory.
- */
+/** Returns the singleton DB instance, cached on globalThis so Next dev-server HMR doesn't spin up a second PGlite against the same dataDir (only one process per data dir is allowed). */
 export function getDb(): Promise<Db> {
   if (globalThis.__rankedDbInstance) {
     return Promise.resolve(globalThis.__rankedDbInstance);

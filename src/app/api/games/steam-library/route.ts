@@ -8,20 +8,12 @@ import { requireUser } from "@/lib/session";
 import { fetchSteamLibrary, SteamNotConfiguredError } from "@/lib/steam";
 
 const LIBRARY_RESULT_LIMIT = 10;
-// How far down the (already playtime-sorted) Steam library to scan looking
-// for LIBRARY_RESULT_LIMIT resolvable, unranked games. Some Steam apps never
-// resolve to an IGDB game (tools, dedicated servers, SDKs), so this needs
-// headroom above LIBRARY_RESULT_LIMIT — scanned in IGDB_MULTIQUERY_MAX-sized
-// batches, so worst case costs a few multiquery round trips, not one per app.
+// How far down the playtime-sorted library to scan for LIBRARY_RESULT_LIMIT resolvable games — needs headroom since some apps (tools, SDKs) never resolve to IGDB; scanned in IGDB_MULTIQUERY_MAX batches to cap round trips.
 const STEAM_SCAN_LIMIT = 30;
-// How long a "no IGDB match" result for a Steam appid is trusted before
-// re-checking IGDB — long enough that repeat requests are effectively free,
-// but not forever, in case IGDB adds the game later.
+// How long a "no IGDB match" is trusted before re-checking IGDB — long enough repeat requests are free, but not forever, in case IGDB adds the game later.
 const STEAM_MISS_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
-// The fields the response actually serializes, for both a freshly-resolved
-// IGDB game and a cached `games` row read straight back out of the DB
-// (which has no `totalRatingCount` — that field is never stored).
+// Response fields shared by a freshly-resolved IGDB game and a cached games row (which has no totalRatingCount — never stored).
 type LibraryMatch = {
   igdbId: number;
   name: string;
@@ -80,11 +72,7 @@ export async function GET() {
     const db = await getDb();
     const scanAppIds = scan.map((game) => game.appId);
 
-    // Everything we already know about this scan window before asking IGDB
-    // anything: which of the user's ranked games are in it (so they're
-    // excluded from results), which Steam appids already have a cached IGDB
-    // match (`games.steam_app_id`), and which are a cached "no match" within
-    // the miss TTL (`steam_app_misses`).
+    // Precompute what's already known for this scan window: the user's ranked games (excluded from results), cached IGDB matches (games.steam_app_id), and fresh cached misses (steam_app_misses).
     const rankedRows = await db
       .select({ igdbId: games.igdbId })
       .from(entries)
@@ -117,17 +105,14 @@ export async function GET() {
 
     const results: LibraryMatch[] = [];
     const seenIgdbIds = new Set<number>();
-    // Steam appids resolved (or confirmed unresolvable) against IGDB during
-    // this request, persisted after the loop so the next request for this
-    // library skips IGDB entirely for them.
+    // Appids resolved (or confirmed unresolvable) this request, persisted after the loop so future requests skip IGDB for them.
     const newlyResolved: GameUpsert[] = [];
     const newMisses: number[] = [];
 
     try {
       for (let start = 0; start < scan.length && results.length < LIBRARY_RESULT_LIMIT; start += IGDB_MULTIQUERY_MAX) {
         const batch = scan.slice(start, start + IGDB_MULTIQUERY_MAX);
-        // Only apps this scan window hasn't already resolved (as a hit
-        // or a fresh miss) need an actual IGDB round trip.
+        // Only apps not already resolved (hit or fresh miss) need an actual IGDB round trip.
         const pending = batch.filter((game) => !cachedByAppId.has(game.appId) && !freshMisses.has(game.appId));
 
         let resolved = new Map<string, IgdbGame>();
@@ -151,9 +136,7 @@ export async function GET() {
           const igdbId = cachedRow?.igdbId ?? resolvedGame?.igdbId;
           if (igdbId === undefined) continue;
           if (rankedIgdbIds.has(igdbId)) continue;
-          // A base game and its edition (e.g. "Fallout 3" + "Fallout 3: GOTY
-          // Edition") can both resolve to the same IGDB entry. Since `scan`
-          // is playtime-sorted, the first (highest-playtime) occurrence wins.
+          // A base game and its edition can resolve to the same IGDB entry — since scan is playtime-sorted, the first (highest-playtime) occurrence wins.
           if (seenIgdbIds.has(igdbId)) continue;
 
           seenIgdbIds.add(igdbId);
@@ -169,11 +152,7 @@ export async function GET() {
       return NextResponse.json({ error: "igdb_unavailable" }, { status: 502 });
     }
 
-    // Persist what was learned this request. A base game and an edition can
-    // both resolve to the same IGDB id, but `games.igdb_id` is the upsert's
-    // conflict target, so a batch can only carry one row per igdbId — the
-    // first Steam appid to claim it wins; the other just stays uncached and
-    // re-resolves next time, which is a minor cost, not a correctness issue.
+    // Persist what was learned this request — games.igdb_id is the upsert conflict target, so only one appid per igdbId is cached; the other just re-resolves next time (minor cost, not a correctness issue).
     if (newlyResolved.length > 0 || newMisses.length > 0) {
       const uniqueResolved = new Map<number, GameUpsert>();
       for (const upsert of newlyResolved) {
@@ -197,8 +176,7 @@ export async function GET() {
             });
         }
       } catch (err) {
-        // A caching failure shouldn't turn an otherwise-successful response
-        // into a 502 — worst case the next request just re-resolves.
+        // A caching failure shouldn't turn an otherwise-successful response into a 502 — worst case, the next request just re-resolves.
         console.error("Failed to cache Steam library matches:", err);
       }
     }

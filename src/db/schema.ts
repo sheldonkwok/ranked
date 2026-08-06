@@ -21,15 +21,12 @@ export const users = pgTable(
     id: text("id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
-    // Nullable — an account can be Twitch-only, Steam-only, or both. See the
-    // `users_identity_required` check below: at least one must be set.
+    // Nullable — an account can be Twitch-only, Steam-only, or both (see the `users_identity_required` check below).
     twitchId: text("twitch_id").unique(),
     username: text("username").notNull(),
     displayName: text("display_name"),
     avatarUrl: text("avatar_url"),
-    // SteamID64, verified via Steam OpenID sign-in. Nullable — not every user
-    // links Steam. Unique so two Ranked accounts can't claim the same Steam
-    // account.
+    // SteamID64, verified via Steam OpenID sign-in; unique so two Ranked accounts can't claim the same Steam account.
     steamId: text("steam_id").unique(),
     steamPersonaName: text("steam_persona_name"),
     steamAvatarUrl: text("steam_avatar_url"),
@@ -37,13 +34,9 @@ export const users = pgTable(
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [
-    // A user with neither identity could never sign in again — the unlink
-    // route (api/auth/steam/unlink) must refuse to null out someone's last
-    // remaining identity, and this is the backstop if it doesn't.
+    // Backstop for the unlink route (api/auth/steam/unlink), which must refuse to null out someone's last identity.
     check("users_identity_required", sql`${table.twitchId} IS NOT NULL OR ${table.steamId} IS NOT NULL`),
-    // /u/[username] resolves case-insensitively (src/lib/users.ts) — without
-    // this a rename (Twitch) or a Steam persona default could collide with
-    // another user's public profile URL.
+    // /u/[username] resolves case-insensitively (src/lib/users.ts), so a rename or Steam persona default can't collide.
     uniqueIndex("users_username_lower_unique").on(sql`lower(${table.username})`),
   ]
 );
@@ -67,24 +60,14 @@ export const games = pgTable(
     firstReleaseDate: timestamp("first_release_date"),
     platforms: jsonb("platforms").$type<string[]>(),
     summary: text("summary"),
-    // The Steam appid this row was resolved from, cached so the /add Steam
-    // library list can skip the IGDB round trip next time. Nullable — games
-    // added via search have never been joined against Steam. Deliberately NOT
-    // unique: a base game and its edition are distinct appids that can resolve
-    // to the same IGDB game, and a unique constraint would turn that into a
-    // 500 on upsert.
+    // Steam appid this row was resolved from, cached to skip the IGDB round trip later; deliberately NOT unique since a base game and its edition can share one IGDB id.
     steamAppId: integer("steam_app_id"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [index("games_steam_app_id_idx").on(table.steamAppId)]
 );
 
-// Negative cache of Steam appids that don't resolve to any IGDB game (tools,
-// SDKs, dedicated servers, soundtracks, etc.) — without this, an unresolvable
-// app sitting high in a user's playtime would cost an IGDB round trip on
-// every single /add Steam library request, forever. `checkedAt` drives a TTL
-// (see STEAM_MISS_TTL_MS in the steam-library route) so an app IGDB adds
-// later eventually gets retried instead of being cached as a miss forever.
+// Negative cache of Steam appids with no IGDB match, so an unresolvable app doesn't cost an IGDB round trip on every /add request; `checkedAt` drives a TTL (STEAM_MISS_TTL_MS in the steam-library route) so IGDB additions get retried eventually.
 export const steamAppMisses = pgTable("steam_app_misses", {
   steamAppId: integer("steam_app_id").primaryKey(),
   checkedAt: timestamp("checked_at").notNull().defaultNow(),

@@ -1,6 +1,4 @@
-// Shared `games` table upsert, used by both POST /api/entries (adding a
-// ranked game found via search) and GET /api/games/steam-library (caching a
-// Steam appid -> IGDB game match so it isn't re-resolved on every request).
+// Shared `games` table upsert, used by both POST /api/entries and GET /api/games/steam-library.
 import { sql } from "drizzle-orm";
 import { type Game, games } from "@/db/schema";
 import type { IgdbGame } from "@/lib/igdb";
@@ -12,16 +10,7 @@ export type GameUpsert = {
   steamAppId?: number;
 };
 
-/**
- * Upserts a batch of IGDB games in a single statement, keyed on `igdbId`.
- *
- * `steamAppId` is combined with `coalesce` rather than overwritten outright:
- * an upsert with no `steamAppId` (the search-add path) must not clobber a
- * `steam_app_id` a previous Steam-library match already recorded on that row,
- * and an upsert that does carry one should still attach to a row that was
- * originally created via search. `excluded.*` refers to the incoming values
- * for the whole batch, so this stays a single round trip regardless of size.
- */
+/** Upserts a batch of IGDB games in a single statement, keyed on `igdbId`; `steamAppId` is `coalesce`d so a search-add upsert can't clobber a Steam-learned value. */
 export async function upsertGames(db: DbOrTx, upserts: GameUpsert[]): Promise<Game[]> {
   if (upserts.length === 0) return [];
 

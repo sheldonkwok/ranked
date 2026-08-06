@@ -8,7 +8,14 @@
 @custom-variant mobile-xs (@media (max-width: 359px));
 
 /* Pixel Ranker design tokens — see Claude Design project "Pixel Ranker.dc.html".
-   The app is dark-only by design; there is no light-mode variant. */
+   The app is dark-only by design; there is no light-mode variant.
+
+   Component-specific styling lives with its component as a cva recipe
+   (src/components/ui/, or colocated for one-off recipes) rather than here —
+   this file is tokens, base element styles, and the handful of things that
+   have to be real CSS (gradients/keyframes referenced by `bg-(image:--…)`/
+   `animate-*`, and the two @utility below that combine with other utilities
+   on the same element). */
 @theme inline {
   --font-pixel: var(--font-vt323);
   --font-sans: var(--font-vt323);
@@ -35,7 +42,8 @@
   --color-link: #9fd0ff;
 
   /* Tier tints for Banner's warn/error variants. The rating bars carry their
-     own palette (see .tier-bar), so there is no `liked` pair here. */
+     own palette (see TierPicker's tierBar recipe), so there is no `liked`
+     pair here. */
   --color-fine: #c6983a;
   --color-fine-edge: #f6e3b0;
 
@@ -44,6 +52,38 @@
 
   --color-danger: #ff8fa0;
   --color-danger-ink: #ffb3bd;
+
+  /* Panel/row surfaces (ui/surface.ts) and the nav/gold buttons (ui/button.ts)
+     read these via `bg-(image:--gradient-*)` so recipe strings stay readable
+     instead of inlining `linear-gradient(...)` as arbitrary values. */
+  --gradient-panel: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--color-panel) 95%, transparent) 0%,
+    color-mix(in srgb, var(--color-panel) 90%, transparent) 100%
+  );
+  --gradient-row: linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0) 60%);
+  --gradient-row-hover: linear-gradient(
+    90deg,
+    rgba(46, 104, 220, 0.95) 0%,
+    rgba(20, 44, 104, 0.35) 70%,
+    rgba(20, 44, 104, 0) 100%
+  );
+  --gradient-btn-nav: linear-gradient(90deg, rgba(30, 58, 120, 0.85) 0%, rgba(8, 14, 30, 0.5) 100%);
+  --gradient-btn-nav-hover: linear-gradient(90deg, rgba(50, 104, 220, 0.95) 0%, rgba(20, 40, 90, 0.6) 100%);
+  --gradient-btn-gold: linear-gradient(90deg, rgba(216, 178, 92, 0.95) 0%, rgba(150, 112, 40, 0.75) 100%);
+  --gradient-btn-gold-hover: linear-gradient(90deg, #f2d489 0%, rgba(190, 146, 60, 0.9) 100%);
+
+  --animate-blink: blink 1s steps(1) infinite;
+  @keyframes blink {
+    0%,
+    49% {
+      opacity: 1;
+    }
+    50%,
+    100% {
+      opacity: 0;
+    }
+  }
 }
 
 @layer base {
@@ -69,590 +109,39 @@
   }
 }
 
-@layer components {
-  /* Bordered gradient container used for list panels, cards, modals. */
-  .pixel-panel {
-    border: 1px solid color-mix(in srgb, var(--color-edge) 50%, transparent);
-    background: linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--color-panel) 95%, transparent) 0%,
-      color-mix(in srgb, var(--color-panel) 90%, transparent) 100%
-    );
-    box-shadow:
-      0 0 0 1px rgba(0, 0, 0, 0.6),
-      0 10px 30px rgba(0, 0, 0, 0.55);
-  }
-
-  /* A row inside a .pixel-panel list — resting sheen + blue sweep on hover. */
-  .pixel-row {
-    background: linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0) 60%);
-    border-bottom: 1px solid color-mix(in srgb, var(--color-edge) 12%, transparent);
-  }
-  .pixel-row:hover {
-    background: linear-gradient(
-      90deg,
-      rgba(46, 104, 220, 0.95) 0%,
-      rgba(20, 44, 104, 0.35) 70%,
-      rgba(20, 44, 104, 0) 100%
-    );
-  }
-
-  /* EntryRow's grid. Rank/cover/chip stay on one line with the title at every
-     width (per the Claude Design mock) — the title track is `minmax(0, 1fr)`
-     so it's the one that gives when space is tight, not the chip. Sizing for
-     the rank numeral, cover, and title/year text lives here too (rather than
-     as Tailwind utilities on EntryRow) so this one block is the single source
-     of truth for row geometry across all three breakpoints.
-
-     Cover + title share one grid track (`.entry-link`, a flex row) rather
-     than two, since that pair is a single clickable unit — either a `<div>`
-     (read-only rows) or a `<Link>` to "games like this" (owner rows). Its
-     internal flex `gap` mirrors the grid's own `column-gap` at each
-     breakpoint so cover-to-title spacing is unchanged from before. */
-  .entry-row-grid {
-    display: grid;
-    grid-template-columns: 44px minmax(0, 1fr) auto;
-    column-gap: 1rem;
-    padding: 12px 18px;
-  }
-  .entry-row-grid .entry-rank {
-    font-size: 28px;
-  }
-  .entry-row-grid .entry-link {
-    display: flex;
-    align-items: center;
-    min-width: 0;
-    gap: 1rem;
-  }
-  .entry-row-grid .entry-cover {
-    width: 42px;
-    height: 56px;
-  }
-  .entry-row-grid .entry-name {
-    font-size: 17px;
-    letter-spacing: 0.5px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .entry-row-grid .entry-year {
-    font-size: 16px;
-  }
-  .entry-row-grid a.entry-link:focus-visible {
-    outline: 4px solid #ffffff;
-    outline-offset: -4px;
-  }
-  @media (max-width: 479px) {
-    .entry-row-grid {
-      grid-template-columns: 28px minmax(0, 1fr) auto;
-      column-gap: 11px;
-      min-height: 68px;
-      padding: 9px 12px;
-    }
-    .entry-row-grid .entry-rank {
-      font-size: 23px;
-    }
-    .entry-row-grid .entry-link {
-      gap: 11px;
-    }
-    .entry-row-grid .entry-cover {
-      width: 40px;
-      height: 54px;
-    }
-    .entry-row-grid .entry-name {
-      font-size: 18px;
-      line-height: 1.15;
-      white-space: normal;
-      text-overflow: clip;
-      display: -webkit-box;
-      -webkit-line-clamp: 3;
-      -webkit-box-orient: vertical;
-      text-wrap: pretty;
-    }
-    .entry-row-grid .entry-year {
-      font-size: 15px;
-    }
-  }
-  @media (max-width: 359px) {
-    .entry-row-grid {
-      grid-template-columns: 24px minmax(0, 1fr) auto;
-      column-gap: 9px;
-      min-height: 66px;
-      padding: 9px 10px;
-    }
-    .entry-row-grid .entry-rank {
-      font-size: 20px;
-    }
-    .entry-row-grid .entry-link {
-      gap: 9px;
-    }
-    .entry-row-grid .entry-cover {
-      width: 34px;
-      height: 46px;
-    }
-    .entry-row-grid .entry-name {
-      font-size: 16px;
-    }
-    .entry-row-grid .entry-year {
-      font-size: 14px;
-    }
-  }
-
-  /* Secondary nav/utility button. */
-  .pixel-btn {
-    font-family: var(--font-sans);
-    font-size: 14px;
-    letter-spacing: 1px;
-    white-space: nowrap;
-    padding: 9px 14px;
-    background: linear-gradient(90deg, rgba(30, 58, 120, 0.85) 0%, rgba(8, 14, 30, 0.5) 100%);
-    color: #dce8ff;
-    border: 1px solid color-mix(in srgb, var(--color-edge) 45%, transparent);
-    cursor: pointer;
-    transition:
-      color 0.1s ease,
-      border-color 0.1s ease,
-      background 0.1s ease;
-  }
-  .pixel-btn:hover {
-    border-color: #ffffff;
-    color: #ffffff;
-    background: linear-gradient(90deg, rgba(50, 104, 220, 0.95) 0%, rgba(20, 40, 90, 0.6) 100%);
-  }
-
-  /* Primary CTA — gold gradient. */
-  .pixel-btn-gold {
-    font-family: var(--font-sans);
-    font-weight: 700;
-    font-size: 14px;
-    letter-spacing: 1px;
-    padding: 14px 18px;
-    background: linear-gradient(90deg, rgba(216, 178, 92, 0.95) 0%, rgba(150, 112, 40, 0.75) 100%);
-    color: #14100a;
-    border: 1px solid var(--color-gold-pale);
-    cursor: pointer;
-    white-space: nowrap;
-    transition: background 0.1s ease;
-  }
-  .pixel-btn-gold:hover {
-    background: linear-gradient(90deg, #f2d489 0%, rgba(190, 146, 60, 0.9) 100%);
-  }
-  .pixel-btn-gold:active {
-    transform: translateY(2px);
-  }
-
-  /* Bare icon CTA — same gold as pixel-btn-gold, no fill/border. */
-  .icon-btn-gold {
-    color: var(--color-gold);
-    cursor: pointer;
-    transition: color 0.1s ease;
-  }
-  .icon-btn-gold:hover {
-    color: var(--color-gold-pale);
-  }
-  .icon-btn-gold:active {
-    transform: translateY(2px);
-  }
-  /* Toggled-on look for icon buttons that are a mode switch rather than a
-     one-shot action (e.g. the /add Steam library toggle) — data-state
-     mirrors the .tier-bar convention rather than a stacked modifier class. */
-  .icon-btn-gold[data-state="active"] {
-    color: var(--color-gold-pale);
-  }
-  /* The Plus/Share header icons have no padding, so their hit area is
-     literally the SVG's own box (24x24, 20x20) — below the 44px touch-target
-     floor. Widen the tappable area on mobile without changing the icon size;
-     both call sites already carry `flex items-center` to center it. */
-  @media (max-width: 479px) {
-    .icon-btn-gold {
-      min-width: 44px;
-      min-height: 44px;
-      justify-content: center;
-    }
-  }
-
-  /* Small inline text-style action (SIGN OUT / modal chrome). */
-  .pixel-btn-ghost {
-    font-family: var(--font-sans);
-    font-size: 11px;
-    letter-spacing: 1px;
-    white-space: nowrap;
-    padding: 8px 10px;
-    background: rgba(255, 255, 255, 0.06);
-    color: var(--color-ink-muted);
-    border: 1px solid color-mix(in srgb, var(--color-edge) 30%, transparent);
-    cursor: pointer;
-    transition:
-      color 0.1s ease,
-      border-color 0.1s ease;
-  }
-  .pixel-btn-ghost:hover {
-    color: #ffffff;
-    border-color: #ffffff;
-  }
-  .pixel-btn-ghost-danger:hover {
-    color: var(--color-danger-ink);
-    border-color: var(--color-danger);
-  }
-  .pixel-btn-ghost:disabled {
-    cursor: not-allowed;
-    opacity: 0.5;
-  }
-
-  /* Retro pixel score chip, doubling as the row's edit trigger. Two layers:
-     the outer element is the outline color, the inner face is the fill, each
-     with its own chamfer. At rest both are the tier color so the ring is
-     invisible; on hover only the face flips, revealing a 2px outline that
-     follows the chamfer (a real border/outline would be sliced off at the
-     diagonals by clip-path, since clip-path clips the whole border-box).
-     Both layers share one chamfer shape; each sets its own `--chamfer` so the
-     face's corners sit 1px inside the outer element's. */
-  .score-chip,
-  .score-chip-face {
-    clip-path: polygon(
-      var(--chamfer) 0,
-      calc(100% - var(--chamfer)) 0,
-      100% var(--chamfer),
-      100% calc(100% - var(--chamfer)),
-      calc(100% - var(--chamfer)) 100%,
-      var(--chamfer) 100%,
-      0 calc(100% - var(--chamfer)),
-      0 var(--chamfer)
-    );
-  }
-  .score-chip {
-    --chamfer: 5px;
-    --score-chip-bg: #6ee787;
-    --score-chip-fg: #07160d;
-    --score-chip-shade: #2f8b52;
-
-    display: inline-block;
-    min-width: 66px;
-    padding: 2px;
-    border: 0;
-    background: var(--score-chip-bg);
-    cursor: pointer;
-    filter: drop-shadow(0 3px 0 var(--score-chip-shade));
-  }
-  .score-chip-face {
-    --chamfer: 4px;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: var(--font-pixel);
-    font-size: 26px;
-    line-height: 1;
-    padding: 2px 10px;
-    background: var(--score-chip-bg);
-    color: var(--score-chip-fg);
-    transition:
-      background-color 0.1s ease,
-      color 0.1s ease;
-  }
-  .score-chip:hover .score-chip-face,
-  .score-chip:focus-visible .score-chip-face {
-    background: var(--score-chip-fg);
-    color: var(--score-chip-bg);
-  }
-  .score-chip:focus-visible {
-    outline: none; /* the inversion is the focus indicator */
-  }
-  .score-chip:active {
-    transform: translateY(2px);
-    filter: drop-shadow(0 1px 0 var(--score-chip-shade));
-  }
-  .score-chip-fine {
-    --score-chip-bg: #efc85c;
-    --score-chip-fg: #170f03;
-    --score-chip-shade: #8b6b2f;
-  }
-  .score-chip-disliked {
-    --score-chip-bg: #f0889b;
-    --score-chip-fg: #17060a;
-    --score-chip-shade: #8b3345;
-  }
-  /* Scores are hidden until SCORE_UNLOCK_THRESHOLD entries — the chip still
-     renders (and still opens the dialog) so early entries stay editable. */
-  .score-chip-locked {
-    --score-chip-bg: #4a5570;
-    --score-chip-fg: #0a0e18;
-    --score-chip-shade: #2a3145;
-  }
-  /* Read-only chip (public profiles) — same look, no interactive affordances. */
-  .score-chip-static {
-    cursor: default;
-  }
-  .score-chip-static:hover .score-chip-face {
-    background: var(--score-chip-bg);
-    color: var(--score-chip-fg);
-  }
-  .score-chip-static:active {
-    transform: none;
-    filter: drop-shadow(0 3px 0 var(--score-chip-shade));
-  }
-  /* Shrink the chip's footprint slightly at mobile widths while keeping it
-     at/above the 44px touch-target floor — today's ~66x33px chip is under it. */
-  @media (max-width: 479px) {
-    .score-chip {
-      min-width: 62px;
-    }
-    .score-chip-face {
-      font-size: 21px;
-      padding: 11px 8px 10px;
-    }
-  }
-  @media (max-width: 359px) {
-    .score-chip {
-      min-width: 54px;
-    }
-    .score-chip-face {
-      font-size: 19px;
-      padding: 12px 6px 11px;
-    }
-  }
-
-  /* Transparent 2px-outline action — EntryDialog's destructive buttons, which
-     sit muted until hover reveals the danger tint. */
-  .pixel-btn-outline {
-    font-family: var(--font-pixel);
-    font-size: 18px;
-    line-height: 1;
-    letter-spacing: 1px;
-    white-space: nowrap;
-    padding: 3px 10px;
-    background: transparent;
-    color: #8d9ac8;
-    border: 2px solid #333b5e;
-    cursor: pointer;
-    transition:
-      color 0.1s ease,
-      border-color 0.1s ease;
-  }
-  .pixel-btn-outline:hover {
-    color: #ffb4c0;
-    border-color: #8a3a4d;
-  }
-
-  /* Tier picker — three full-width choice bars, shared by the add flow and the
-     edit dialog. Flat saturated fills with near-black ink: the old treatment put
-     white type on a color→black gradient and washed out at the light end.
-     The 22px/26px rhythm hangs off the optional prompt and back button rather
-     than a container `gap`, so the dialog — which renders neither — doesn't get
-     a phantom leading or trailing gap. */
-  .tier-picker {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .tier-prompt {
-    margin-bottom: 22px;
-    font-family: var(--font-pixel);
-    font-size: 12px;
-    line-height: 1;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: #dce7f7;
-    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.55);
-  }
-  .tier-bars {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-  }
-
-  /* Palette is scoped per bar the way .score-chip does it: the base class
-     declares the custom props and the modifiers swap them.
-     `data-state` (idle | selected | dimmed) instead of stacking modifier
-     classes, so hover/press only apply to `idle` and the committed bar can't
-     have its pressed look undone by a stray hover. */
-  .tier-bar {
-    --tier-fill: #4fd48a;
-    --tier-ink: #08160e;
-
-    display: flex;
-    align-items: center;
-    width: 100%;
-    /* min- rather than a fixed height purely as insurance: at the dialog's
-       narrowest (296px) the longest label is ~162px, so nothing wraps. */
-    min-height: 78px;
-    padding: 0 26px;
-    border: 0;
-    border-radius: 0;
-    background: var(--tier-fill);
-    color: var(--tier-ink);
-    font-family: var(--font-pixel);
-    font-size: 20px;
-    line-height: 1;
-    letter-spacing: 0.08em;
-    text-align: left;
-    text-transform: uppercase;
-    text-shadow: none;
-    cursor: pointer;
-    box-shadow:
-      inset 0 -6px 0 rgba(0, 0, 0, 0.22),
-      0 4px 0 rgba(0, 0, 0, 0.45);
-    /* Chunky by design: two discrete frames, never a smooth ease. */
-    transition:
-      background-color 80ms steps(2),
-      transform 80ms steps(2),
-      box-shadow 80ms steps(2),
-      filter 80ms steps(2);
-  }
-  .tier-bar[data-state="idle"]:hover,
-  .tier-bar[data-state="idle"]:focus-visible {
-    background: color-mix(in srgb, #ffffff 8%, var(--tier-fill));
-    transform: translateY(-2px);
-    box-shadow:
-      inset 0 -6px 0 rgba(0, 0, 0, 0.22),
-      0 6px 0 rgba(0, 0, 0, 0.45);
-  }
-  /* After :hover, so a pressed-while-hovered bar wins on source order. */
-  .tier-bar[data-state="idle"]:active,
-  .tier-bar[data-state="selected"] {
-    transform: translateY(4px);
-    box-shadow:
-      inset 0 -6px 0 rgba(0, 0, 0, 0.22),
-      0 0 0 rgba(0, 0, 0, 0.45);
-    transition: none; /* the press has to land instantly */
-  }
-  .tier-bar[data-state="dimmed"] {
-    filter: saturate(0.45) brightness(0.7);
-  }
-  .tier-bar[data-state="selected"],
-  .tier-bar[data-state="dimmed"] {
-    cursor: default;
-  }
-  .tier-bar:focus-visible {
-    outline: 4px solid #ffffff;
-    outline-offset: -4px;
-  }
-  .tier-bar-liked {
-    --tier-fill: #4fd48a;
-    --tier-ink: #08160e;
-  }
-  .tier-bar-fine {
-    --tier-fill: #f2c94c;
-    --tier-ink: #1a1305;
-  }
-  .tier-bar-disliked {
-    --tier-fill: #ff6b8b;
-    --tier-ink: #1c0810;
-  }
-
-  .tier-back {
-    display: inline-flex;
-    align-self: flex-start;
-    align-items: center;
-    gap: 10px;
-    margin-top: 26px;
-    padding: 10px 16px;
-    border: 0;
-    background: #0e1420;
-    box-shadow: 0 3px 0 rgba(0, 0, 0, 0.45);
-    font-family: var(--font-pixel);
-    font-size: 13px;
-    line-height: 1;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: #dce7f7;
-    cursor: pointer;
-    transition: background-color 80ms steps(2);
-  }
-  .tier-back:hover {
-    background: #162031;
-  }
-  .tier-back:active {
-    transform: translateY(3px);
-    box-shadow: 0 0 0 rgba(0, 0, 0, 0.45);
-    transition: none;
-  }
-  .tier-back:focus-visible {
-    outline: 4px solid #ffffff;
-    outline-offset: -4px;
-  }
-  .tier-back[aria-disabled="true"] {
-    cursor: default;
-    opacity: 0.55;
-  }
-  .tier-back[aria-disabled="true"]:hover {
-    background: #0e1420;
-  }
-  .tier-back-chevron {
-    font-size: 13px;
-    color: #7fa8de;
-  }
-
-  /* Matches the .entry-row-grid breakpoint. 64px still clears the 44px
-     touch-target floor. */
-  @media (max-width: 479px) {
-    .tier-bar {
-      min-height: 64px;
-      font-size: 16px;
-    }
-  }
-
-  /* Keep the press readable without motion — the drop shadow still collapses,
-     the bar just doesn't travel. Same selectors as above so source order wins. */
-  @media (prefers-reduced-motion: reduce) {
-    .tier-bar,
-    .tier-bar[data-state="idle"]:hover,
-    .tier-bar[data-state="idle"]:focus-visible,
-    .tier-bar[data-state="idle"]:active,
-    .tier-bar[data-state="selected"],
-    .tier-back,
-    .tier-back:active {
-      transform: none;
-      transition: none;
-    }
-  }
-
-  /* Section/page headings in the pixel display face. */
-  .pixel-heading {
-    font-family: var(--font-pixel);
-    line-height: 1.5;
-    color: #ffffff;
-    text-shadow:
-      0 3px 6px rgba(0, 0, 0, 0.95),
-      0 0 18px rgba(120, 170, 255, 0.35);
-  }
-
-  /* Legibility shadow for body text sitting directly over the artwork. */
-  .pixel-text-shadow {
-    text-shadow:
-      0 0 10px rgba(0, 0, 0, 0.95),
-      0 2px 4px rgba(0, 0, 0, 1);
-  }
-
-  /* Diagonal hatch fill for missing covers and loading skeletons. */
-  .cover-hatch {
-    background-image: repeating-linear-gradient(
-      135deg,
-      rgba(120, 150, 200, 0.18) 0px,
-      rgba(120, 150, 200, 0.18) 5px,
-      rgba(10, 16, 32, 0.5) 5px,
-      rgba(10, 16, 32, 0.5) 10px
-    );
-  }
+/* Diagonal hatch fill for missing covers and loading skeletons. */
+@utility cover-hatch {
+  background-image: repeating-linear-gradient(
+    135deg,
+    rgba(120, 150, 200, 0.18) 0px,
+    rgba(120, 150, 200, 0.18) 5px,
+    rgba(10, 16, 32, 0.5) 5px,
+    rgba(10, 16, 32, 0.5) 10px
+  );
 }
 
-@keyframes blink {
-  0%,
-  49% {
-    opacity: 1;
-  }
-  50%,
-  100% {
-    opacity: 0;
-  }
+/* Legibility shadow for body text sitting directly over the artwork. Named
+   `scrim-*` rather than `text-shadow-*` to avoid colliding with Tailwind's
+   own text-shadow utilities. */
+@utility scrim-shadow {
+  text-shadow:
+    0 0 10px rgba(0, 0, 0, 0.95),
+    0 2px 4px rgba(0, 0, 0, 1);
 }
 
-.blink {
-  animation: blink 1s steps(1) infinite;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .blink {
-    animation: none;
-  }
+/* Retro pixel chamfer — an 8-point clip-path polygon shared by the score
+   chip's outer element and inner face (each sets its own size so the face's
+   corners sit 1px inside the outer element's). `chamfer-[5px]` / `chamfer-[4px]`. */
+@utility chamfer-* {
+  --chamfer: --value([length]);
+  clip-path: polygon(
+    var(--chamfer) 0,
+    calc(100% - var(--chamfer)) 0,
+    100% var(--chamfer),
+    100% calc(100% - var(--chamfer)),
+    calc(100% - var(--chamfer)) 100%,
+    var(--chamfer) 100%,
+    0 calc(100% - var(--chamfer)),
+    0 var(--chamfer)
+  );
 }

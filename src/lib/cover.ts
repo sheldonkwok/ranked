@@ -1,5 +1,4 @@
-// Client-safe helper for building IGDB cover image URLs.
-// No env access here — this is imported from both server and client components.
+// Client-safe helper for building IGDB cover image URLs — no env access, imported from both server and client components.
 
 export type CoverSize = "cover_small" | "cover_big" | "thumb" | "720p";
 

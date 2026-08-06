@@ -1,9 +1,4 @@
-// Server-only session management: hand-rolled DB sessions following the
-// Lucia-guide pattern (https://lucia-auth.com/sessions/basic-api/) —
-// a random token is given to the client, only its SHA-256 hash is stored
-// server-side, and the row is looked up by that hash on every request.
-//
-// This file must never be imported from client components/bundles.
+// Server-only session management: hand-rolled DB sessions following the Lucia pattern (https://lucia-auth.com/sessions/basic-api/).
 if (typeof window !== "undefined") {
   throw new Error("session.ts is server-only");
 }
@@ -20,18 +15,11 @@ export const SESSION_COOKIE_NAME = "session";
 const SESSION_DURATION_MS = 1000 * 60 * 60 * 24 * 30; // 30 days
 const SESSION_RENEWAL_THRESHOLD_MS = 1000 * 60 * 60 * 24 * 15; // 15 days
 
-/**
- * Opt-in dev-only auth bypass. Gated on NODE_ENV !== "production" in code
- * (not just convention), so DISABLE_AUTH is inert even if it's accidentally
- * set in a prod environment. See DISABLE_AUTH in .env.example.
- */
+// Opt-in dev-only auth bypass, gated on NODE_ENV !== "production" in code so it's inert if accidentally set in prod. See .env.example.
 const AUTH_DISABLED = process.env.NODE_ENV !== "production" && process.env.DISABLE_AUTH === "true";
 const DEV_USER_TWITCH_ID = "dev-user";
 
-/**
- * Upserts a fixed synthetic "dev" user, used in place of real auth when
- * AUTH_DISABLED. Mirrors the upsert in scripts/dev-session.ts.
- */
+// Upserts a fixed synthetic "dev" user, used in place of real auth when AUTH_DISABLED. Mirrors the upsert in scripts/dev-session.ts.
 async function getOrCreateDevUser(): Promise<User> {
   const db = await getDb();
   const [user] = await db
@@ -50,30 +38,19 @@ async function getOrCreateDevUser(): Promise<User> {
   return withResolvedAvatar(user);
 }
 
-/**
- * Generates a fresh, cryptographically random session token to hand to the
- * client (as the cookie value). Never stored server-side directly — see
- * `hashToken`.
- */
+/** Generates a fresh, cryptographically random session token for the client cookie — never stored server-side directly, see `hashToken`. */
 export function generateSessionToken(): string {
   const bytes = new Uint8Array(32);
   crypto.getRandomValues(bytes);
   return Buffer.from(bytes).toString("base64url");
 }
 
-/**
- * The session's DB id is the SHA-256 hex digest of its token, so that a
- * stolen DB row (e.g. via a read-only SQL injection) can't be replayed as a
- * valid session cookie.
- */
+/** The session's DB id is the SHA-256 hex digest of its token, so a stolen DB row can't be replayed as a valid session cookie. */
 export function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
 
-/**
- * Creates a new session for `userId`, valid for 30 days from now.
- * Returns both the raw token (to set as a cookie) and the DB row.
- */
+/** Creates a new session for `userId`, valid for 30 days; returns both the raw token (for the cookie) and the DB row. */
 export async function createSession(userId: string): Promise<{ token: string; session: Session }> {
   const token = generateSessionToken();
   const sessionId = hashToken(token);
@@ -85,18 +62,7 @@ export async function createSession(userId: string): Promise<{ token: string; se
   return { token, session };
 }
 
-/**
- * Validates a raw session token against the DB.
- *
- * - Unknown token -> null.
- * - Expired session -> deletes the row, returns null.
- * - Session within 15 days of expiry -> slides the expiry forward to 30
- *   days from now (renewal-on-use), persisted to the DB.
- *
- * Does NOT touch cookies — callers that can set cookies (route handlers,
- * server functions) should refresh the cookie's expiry themselves when the
- * returned session's `expiresAt` differs from what's currently set.
- */
+/** Validates a token against the DB: unknown -> null, expired -> deletes row and returns null, within 15 days of expiry -> renews. Does not touch cookies. */
 export async function validateSessionToken(token: string): Promise<{ user: User; session: Session } | null> {
   const sessionId = hashToken(token);
   const db = await getDb();
@@ -132,11 +98,7 @@ export async function invalidateSession(sessionId: string): Promise<void> {
   await db.delete(sessions).where(eq(sessions.id, sessionId));
 }
 
-/**
- * Sets the `session` cookie. httpOnly + sameSite=lax + secure-in-prod, with
- * `expires` mirroring the DB row's `expiresAt` so the client-side cookie
- * lifetime always matches server-side session validity.
- */
+/** Sets the `session` cookie (httpOnly, sameSite=lax, secure-in-prod), with `expires` mirroring the DB row's `expiresAt`. */
 export async function setSessionCookie(token: string, expiresAt: Date): Promise<void> {
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE_NAME, token, {
@@ -166,24 +128,7 @@ async function getSessionTokenFromCookie(): Promise<string | null> {
   return cookieStore.get(SESSION_COOKIE_NAME)?.value ?? null;
 }
 
-/**
- * Resolves the current request's authenticated user, or null.
- *
- * Wrapped in React's `cache()` so multiple calls within the same request
- * (e.g. a layout and a page both calling this) only hit the DB once.
- *
- * Opportunistically refreshes the session cookie's expiry when
- * `validateSessionToken` slides the session forward. That `cookies().set`
- * call is only legal in a route handler or server function — when
- * `getCurrentUser` is called from a Server Component render, Next.js throws;
- * we swallow that specific case since the cookie will simply get refreshed
- * on a subsequent request that *can* set cookies (e.g. the next
- * navigation's route handler, or middleware/proxy re-issuing it isn't
- * needed since presence-only checks don't care about the exact expiry).
- *
- * When AUTH_DISABLED, short-circuits to a fixed synthetic dev user — no
- * cookie, no DB session row, no Twitch calls involved.
- */
+// Resolves the current request's authenticated user (or null), wrapped in React's `cache()` so one request hits the DB once. When AUTH_DISABLED, short-circuits to a fixed synthetic dev user.
 export const getCurrentUser = cache(async (): Promise<User | null> => {
   if (AUTH_DISABLED) {
     return getOrCreateDevUser();
@@ -198,8 +143,7 @@ export const getCurrentUser = cache(async (): Promise<User | null> => {
   try {
     await setSessionCookie(token, result.session.expiresAt);
   } catch {
-    // Called from a Server Component render, where cookies can't be set.
-    // Safe to ignore — see JSDoc above.
+    // Called from a Server Component render, where cookies can't be set — safe to ignore, it'll refresh on a later request.
   }
 
   return result.user;
@@ -213,28 +157,7 @@ export class UnauthorizedError extends Error {
   }
 }
 
-/**
- * Like `getCurrentUser()`, but throws `UnauthorizedError` instead of
- * returning null.
- *
- * Intended for API route handlers, which can do:
- *
- * ```ts
- * try {
- *   const user = await requireUser();
- *   // ...
- * } catch (err) {
- *   if (err instanceof UnauthorizedError) {
- *     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
- *   }
- *   throw err;
- * }
- * ```
- *
- * Pages and Server Components should generally prefer `getCurrentUser()`
- * plus an explicit `redirect('/sign-in')`, since a thrown error there would
- * surface as a 500 error page rather than a friendly redirect.
- */
+/** Like `getCurrentUser()` but throws `UnauthorizedError` instead of returning null; for API routes — pages should prefer `getCurrentUser()` + `redirect`. */
 export async function requireUser(): Promise<User> {
   const user = await getCurrentUser();
   if (!user) {

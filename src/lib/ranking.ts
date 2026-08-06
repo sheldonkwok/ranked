@@ -2,14 +2,7 @@ import { and, eq, gt, gte, ne, sql } from "drizzle-orm";
 import type { Db, Tx } from "@/db";
 import { type Entry, entries, type Game, games, type Tier } from "@/db/schema";
 
-/**
- * Read-only query functions accept either a plain `Db` handle (e.g. from
- * `getDb()` in a server component) or an in-flight transaction `Tx` (e.g.
- * from inside an API route's `db.transaction(...)` callback). Both expose
- * the same `select` query-builder surface we rely on here, so a simple
- * union typechecks cleanly against both drivers without needing a custom
- * structural interface.
- */
+/** A plain `Db` handle or an in-flight transaction `Tx` — both expose the same `select` surface used here. */
 export type DbOrTx = Db | Tx;
 
 export const TIER_BANDS: Record<Tier, { lo: number; hi: number }> = {
@@ -25,9 +18,7 @@ export const SCORE_UNLOCK_THRESHOLD = 10;
 
 /** Whether a user with `entryCount` total ranked entries should see numeric scores. */
 export function scoresUnlocked(entryCount: number): boolean {
-  // Skip the threshold under `next dev` so scores are visible without ranking 10 games first.
-  // Checked against "development" specifically (not the broader `!== "production"`) so this
-  // doesn't also flip on under `vitest`, which sets NODE_ENV="test".
+  // Skip the threshold under `next dev` (not `vitest`, which sets NODE_ENV="test") so scores show without ranking 10 games first.
   if (process.env.NODE_ENV === "development") return true;
   return entryCount >= SCORE_UNLOCK_THRESHOLD;
 }
@@ -47,14 +38,7 @@ export type RankedEntry = {
   game: Game;
 };
 
-/**
- * Derives a game's 0-10 score from its position within its tier.
- *
- * A tier's band is spread evenly across its members: the best entry
- * (index 0) gets `hi`, the worst (index count-1) gets `lo`, and everything
- * else is linearly interpolated. A lone entry in a tier gets `hi`. Result
- * is rounded to one decimal place.
- */
+/** Derives a game's 0-10 score by interpolating its position within its tier's band (a lone entry gets `hi`), rounded to one decimal. */
 export function computeScore(index: number, count: number, tier: Tier): number {
   const { lo, hi } = TIER_BANDS[tier];
 
@@ -104,11 +88,7 @@ export async function getRankedEntries(dbOrTx: DbOrTx, userId: string): Promise<
   return rows.map(toRankedEntry);
 }
 
-/**
- * A single tier's entries, ordered by position. Pass `excludeEntryId` to
- * build the "candidate list" a client compares a specific entry against
- * during re-ranking (e.g. when moving that entry within the same tier).
- */
+/** A single tier's entries, ordered by position; pass `excludeEntryId` to build the "candidate list" for re-ranking. */
 export async function getTierEntries(
   dbOrTx: DbOrTx,
   userId: string,
@@ -139,11 +119,7 @@ async function countTierEntries(tx: Tx, userId: string, tier: Tier): Promise<num
   return row?.count ?? 0;
 }
 
-/**
- * Inserts a new entry into `tier` at `position` (clamped to the tier's
- * current bounds), shifting later entries down to make room, and
- * recomputes the whole tier's scores. Returns the new entry's id.
- */
+/** Inserts a new entry into `tier` at `position` (clamped to bounds), shifting later entries down, and recomputes tier scores. */
 export async function insertEntry(
   tx: Tx,
   userId: string,
@@ -189,13 +165,7 @@ async function loadOwnedEntry(tx: Tx, userId: string, entryId: number): Promise<
   return entry;
 }
 
-/**
- * Moves an existing entry to `newPosition` within `newTier`. `newPosition`
- * is an index into the target tier's list *excluding* the moving entry
- * itself (i.e. the candidate list a client would render after filtering
- * the entry being moved out), and is clamped to that list's bounds.
- * Recomputes scores for the old tier and, if different, the new tier.
- */
+/** Moves an entry to `newPosition` (an index into `newTier`'s list excluding itself, clamped) and recomputes affected tier scores. */
 export async function moveEntry(
   tx: Tx,
   userId: string,
@@ -220,8 +190,7 @@ export async function moveEntry(
 
   const clamped = Math.max(0, Math.min(newPosition, count));
 
-  // Make room in the target tier for the moving entry (never shifting
-  // the moving entry itself, which still holds its stale position).
+  // Make room in the target tier without shifting the moving entry itself (still at its stale position).
   await tx
     .update(entries)
     .set({ position: sql`${entries.position} + 1` })
@@ -245,10 +214,7 @@ export async function moveEntry(
   }
 }
 
-/**
- * Deletes an entry, closes the gap it left in its tier, and recomputes
- * that tier's scores.
- */
+/** Deletes an entry, closes the gap it left in its tier, and recomputes that tier's scores. */
 export async function removeEntry(tx: Tx, userId: string, entryId: number): Promise<void> {
   const entry = await loadOwnedEntry(tx, userId, entryId);
 
@@ -262,11 +228,7 @@ export async function removeEntry(tx: Tx, userId: string, entryId: number): Prom
   await recomputeTierScores(tx, userId, entry.tier);
 }
 
-/**
- * Recomputes every score in `tier` from its current position order, and
- * (defensively) normalizes positions to a dense 0..n-1 range in the
- * process.
- */
+/** Recomputes every score in `tier` from its current position order, normalizing positions to a dense 0..n-1 range. */
 export async function recomputeTierScores(tx: Tx, userId: string, tier: Tier): Promise<void> {
   const rows = await tx
     .select({ id: entries.id })

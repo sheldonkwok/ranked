@@ -3,8 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
-// Global "a" shortcut on the home page → jump straight to /add. Renders
-// nothing; just wires up the listener for as long as it's mounted.
+// Global "a" shortcut on the home page → jump straight to /add; renders nothing, just wires up the listener while mounted.
 export default function AddHotkey() {
   const router = useRouter();
 
@@ -17,8 +16,7 @@ export default function AddHotkey() {
         return;
       }
 
-      // A modal (e.g. EntryDialog) can be open over the home list —
-      // navigating out from under it would be jarring, so leave it alone.
+      // A modal (e.g. EntryDialog) can be open over the home list — navigating out from under it would be jarring, so leave it alone.
       if (document.querySelector('[aria-modal="true"]')) return;
 
       e.preventDefault();

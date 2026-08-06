@@ -5,8 +5,10 @@ import { useEffect, useRef, useState } from "react";
 import ComparisonModal from "@/components/ComparisonModal";
 import TierPicker from "@/components/TierPicker";
 import Banner from "@/components/ui/Banner";
+import { button } from "@/components/ui/button";
 import ModalShell from "@/components/ui/ModalShell";
 import PixelLoader from "@/components/ui/PixelLoader";
+import { heading } from "@/components/ui/surface";
 import type { Tier } from "@/db/schema";
 import { type ComparisonCandidate, useComparisonRanking } from "@/hooks/useComparisonRanking";
 import { TIER_LABEL } from "@/lib/tiers";
@@ -42,9 +44,7 @@ export default function EntryDialog({
 
   const comparison = useComparisonRanking(candidates);
 
-  // Guards against re-submitting on every re-render once we've already
-  // kicked off a submit for the current comparison round (mirrors
-  // AddFlow's pattern for the same auto-submit effect below).
+  // Guards against re-submitting on every re-render once a submit has already kicked off for this comparison round (mirrors AddFlow's pattern for the same effect below).
   const submittedForRef = useRef<ComparisonCandidate[] | null>(null);
 
   function backToTier() {
@@ -129,8 +129,7 @@ export default function EntryDialog({
 
       if (res.ok) {
         router.refresh();
-        // Leave phase as "removing" — the row disappears once the refreshed
-        // server data lands, so there's no stale phase to reset to.
+        // Leave phase as "removing" — the row disappears once refreshed server data lands, so there's no stale phase to reset to.
         return;
       }
 
@@ -148,9 +147,7 @@ export default function EntryDialog({
     }
   }
 
-  // Auto-submit once the comparison loop lands on a final position
-  // (including the empty-tier case, where the hook completes immediately
-  // with zero comparisons).
+  // Auto-submit once the comparison loop lands on a final position (including the empty-tier case, which completes immediately with zero comparisons).
   // biome-ignore lint/correctness/useExhaustiveDependencies: submit reads the deps already listed; adding it (redefined every render) would re-fire this effect on every render
   useEffect(() => {
     if (
@@ -165,14 +162,11 @@ export default function EntryDialog({
   }, [phase, comparison.status, comparison.finalPosition, candidates]);
 
   function handleSkip() {
-    // Skipping a too-close comparison counts as the re-ranked game LOSING
-    // that comparison, same rationale as AddFlow.
+    // Skipping a too-close comparison counts as the re-ranked game LOSING that comparison, same rationale as AddFlow.
     comparison.choose(false);
   }
 
-  // During the comparing phase, ComparisonModal renders its own shell, so we
-  // pass our cancel handler straight through to it (with the same
-  // submitting-disabled rule) instead of rendering a second modal.
+  // During the comparing phase, ComparisonModal renders its own shell, so we pass our cancel handler straight through to it instead of rendering a second modal.
   const showComparisonModal = phase === "comparing" && comparison.currentCandidate !== null;
 
   if (showComparisonModal && comparison.currentCandidate) {
@@ -192,18 +186,14 @@ export default function EntryDialog({
   return (
     <ModalShell onCloseAction={onCloseAction} closeDisabled={phase === "submitting" || phase === "removing"}>
       <div className="flex flex-col gap-1">
-        <h2 className="pixel-heading text-[13px]">EDIT {game.name.toUpperCase()}</h2>
+        <h2 className={heading({ className: "text-[13px]" })}>EDIT {game.name.toUpperCase()}</h2>
         <p className="text-xs tracking-[1px] text-ink-dim">CURRENTLY: {TIER_LABEL[currentTier].toUpperCase()}</p>
       </div>
 
       {(phase === "tier" || phase === "loading-candidates") && (
         <div className="flex flex-col gap-4">
           {tierError && <Banner variant="error">{tierError}</Banner>}
-          {/* No prompt (the <h2> above already frames it) and no back button
-              (ModalShell's X is the way out), so the picker collapses to just
-              the bar stack. `currentTier` is deliberately NOT passed as
-              `selected` — that state means "committed, working", and it dims
-              the other two bars, which here are the ones the user came to click. */}
+          {/* No prompt/back button here since <h2> and ModalShell's X cover those; `currentTier` is deliberately NOT passed as `selected`, since that state dims the other two bars — the ones the user came to click. */}
           <TierPicker selected={phase === "loading-candidates" ? tier : null} onPickAction={handlePickTier} />
           {phase === "loading-candidates" ? (
             <div role="status">
@@ -211,7 +201,7 @@ export default function EntryDialog({
             </div>
           ) : (
             <div className="border-t border-edge/45 pt-4">
-              <button type="button" onClick={askToRemove} className="pixel-btn-outline">
+              <button type="button" onClick={askToRemove} className={button({ variant: "outline" })}>
                 REMOVE
               </button>
             </div>
@@ -228,10 +218,10 @@ export default function EntryDialog({
           <p className="text-sm text-ink">REMOVE {game.name.toUpperCase()} FROM YOUR LIST?</p>
           {removeError && <Banner variant="error">{removeError}</Banner>}
           <div className="flex items-center gap-4">
-            <button type="button" onClick={handleRemove} className="pixel-btn-outline">
+            <button type="button" onClick={handleRemove} className={button({ variant: "outline" })}>
               YES, REMOVE
             </button>
-            <button type="button" onClick={() => setPhase("tier")} className="pixel-btn-ghost">
+            <button type="button" onClick={() => setPhase("tier")} className={button({ variant: "ghost" })}>
               CANCEL
             </button>
           </div>
@@ -254,7 +244,7 @@ export default function EntryDialog({
               <button
                 type="button"
                 onClick={() => submit(comparison.finalPosition as number)}
-                className="pixel-btn-ghost"
+                className={button({ variant: "ghost" })}
               >
                 TRY AGAIN
               </button>
@@ -266,12 +256,12 @@ export default function EntryDialog({
                   router.refresh();
                   onCloseAction();
                 }}
-                className="pixel-btn-ghost"
+                className={button({ variant: "ghost" })}
               >
                 CLOSE
               </button>
             ) : (
-              <button type="button" onClick={backToTier} className="pixel-btn-ghost">
+              <button type="button" onClick={backToTier} className={button({ variant: "ghost" })}>
                 ← BACK
               </button>
             )}

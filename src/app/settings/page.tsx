@@ -5,6 +5,7 @@ import SignOutButton from "@/components/SignOutButton";
 import SteamLink from "@/components/SteamLink";
 import TwitchLink from "@/components/TwitchLink";
 import Banner from "@/components/ui/Banner";
+import { heading } from "@/components/ui/surface";
 import { getCurrentUser } from "@/lib/session";
 
 export const metadata: Metadata = {
@@ -43,7 +44,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
       )}
 
       <div className="flex flex-col gap-2">
-        <h1 className="pixel-heading text-[18px]">{(user.displayName ?? user.username).toUpperCase()}</h1>
+        <h1 className={heading({ className: "text-[18px]" })}>{(user.displayName ?? user.username).toUpperCase()}</h1>
         <p className="text-sm tracking-[1px] text-ink-dim">@{user.username}</p>
         <p className="text-xs tracking-[1px] text-ink-faint">MEMBER SINCE {memberSince.toUpperCase()}</p>
       </div>

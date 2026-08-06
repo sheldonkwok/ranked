@@ -7,6 +7,7 @@ import CoverImage from "@/components/CoverImage";
 import GameSearch, { type GameSearchResult } from "@/components/GameSearch";
 import TierPicker from "@/components/TierPicker";
 import Banner from "@/components/ui/Banner";
+import { button } from "@/components/ui/button";
 import PixelLoader from "@/components/ui/PixelLoader";
 import type { Tier } from "@/db/schema";
 import { type ComparisonCandidate, useComparisonRanking } from "@/hooks/useComparisonRanking";
@@ -38,9 +39,7 @@ export default function AddFlow({ steamLinked, relatedTo }: { steamLinked: boole
 
   const comparison = useComparisonRanking(candidates);
 
-  // Guards against re-submitting on every re-render once we've already
-  // kicked off a submit for the current comparison round (e.g. after a
-  // failed submit sets `failure` but leaves comparison.status === "done").
+  // Guards against re-submitting every re-render once a submit has been kicked off for this comparison round (e.g. after a failed submit leaves comparison.status === "done").
   const submittedForRef = useRef<ComparisonCandidate[] | null>(null);
 
   const backToSearch = useCallback(() => {
@@ -137,9 +136,7 @@ export default function AddFlow({ steamLinked, relatedTo }: { steamLinked: boole
     }
   }
 
-  // Auto-submit once the comparison loop lands on a final position
-  // (including the empty-tier case, where the hook completes immediately
-  // with zero comparisons).
+  // Auto-submit once the comparison loop lands on a final position (including the empty-tier case, which completes immediately with zero comparisons).
   // biome-ignore lint/correctness/useExhaustiveDependencies: submit reads the deps already listed; adding it (redefined every render) would re-fire this effect on every render
   useEffect(() => {
     if (
@@ -153,11 +150,7 @@ export default function AddFlow({ steamLinked, relatedTo }: { steamLinked: boole
     }
   }, [phase, comparison.status, comparison.finalPosition, candidates]);
 
-  // Esc steps back one screen in the add flow, mirroring the on-screen back
-  // buttons (TierPicker's onBackAction, the "< BACK" / "← BACK" buttons below),
-  // and only leaves for home from the search step or a conflict failure —
-  // the only phases with no back destination. Ignored while a save is in
-  // flight (`submitting`) so a keystroke can't yank the user away mid-write.
+  // Esc steps back a screen (mirroring the on-screen back buttons), only leaving for home from search or a conflict failure (the only phases with no back destination); ignored while `submitting` so a keystroke can't yank the user away mid-write.
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key !== "Escape" || e.metaKey || e.ctrlKey || e.altKey) return;
@@ -186,9 +179,7 @@ export default function AddFlow({ steamLinked, relatedTo }: { steamLinked: boole
   }, [phase, failure, router, backToSearch, backToTier]);
 
   function handleSkip() {
-    // Skipping a too-close comparison counts as the new game LOSING that
-    // comparison, nudging it toward the middle of the ranking rather than
-    // assuming it's better than the candidate.
+    // Skipping counts as the new game LOSING that comparison, nudging it toward the middle rather than assuming it's better.
     comparison.choose(false);
   }
 
@@ -227,9 +218,7 @@ export default function AddFlow({ steamLinked, relatedTo }: { steamLinked: boole
       {(phase === "tier" || phase === "loading-candidates") && (
         <div className="flex flex-col gap-4">
           {tierError && <Banner variant="error">{tierError}</Banner>}
-          {/* `selected` comes off phase, not `tier`: a failed candidate fetch
-              leaves `tier` set, and reading it directly would strand the picker
-              in the committed look underneath the retry banner. */}
+          {/* `selected` comes off phase, not `tier`, so a failed candidate fetch (which leaves `tier` set) doesn't strand the picker in the committed look under the retry banner. */}
           <TierPicker
             prompt="HOW WAS IT?"
             selected={phase === "loading-candidates" ? tier : null}
@@ -254,7 +243,7 @@ export default function AddFlow({ steamLinked, relatedTo }: { steamLinked: boole
             comparisonsDone={comparison.comparisonsDone}
             maxComparisons={comparison.maxComparisons}
           />
-          <button type="button" onClick={backToTier} className="pixel-text-shadow self-start text-sm text-ink">
+          <button type="button" onClick={backToTier} className="scrim-shadow self-start text-sm text-ink">
             &lt; BACK
           </button>
         </div>
@@ -269,7 +258,11 @@ export default function AddFlow({ steamLinked, relatedTo }: { steamLinked: boole
           {failure === "conflict" && (
             <div className="flex flex-col gap-3">
               <Banner variant="warn">You&apos;ve already ranked this game.</Banner>
-              <button type="button" onClick={() => router.push("/")} className="pixel-btn-ghost self-start">
+              <button
+                type="button"
+                onClick={() => router.push("/")}
+                className={button({ variant: "ghost", className: "self-start" })}
+              >
                 GO TO HOME
               </button>
             </div>
@@ -286,13 +279,13 @@ export default function AddFlow({ steamLinked, relatedTo }: { steamLinked: boole
               <button
                 type="button"
                 onClick={() => submit(comparison.finalPosition as number)}
-                className="pixel-btn-ghost"
+                className={button({ variant: "ghost" })}
               >
                 TRY AGAIN
               </button>
             )}
             {failure !== "conflict" && (
-              <button type="button" onClick={backToTier} className="pixel-btn-ghost">
+              <button type="button" onClick={backToTier} className={button({ variant: "ghost" })}>
                 ← BACK
               </button>
             )}
