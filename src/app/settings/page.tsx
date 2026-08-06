@@ -3,6 +3,7 @@ import Image from "next/image";
 import { redirect } from "next/navigation";
 import SignOutButton from "@/components/SignOutButton";
 import SteamLink from "@/components/SteamLink";
+import TwitchLink from "@/components/TwitchLink";
 import Banner from "@/components/ui/Banner";
 import { getCurrentUser } from "@/lib/session";
 
@@ -11,7 +12,7 @@ export const metadata: Metadata = {
 };
 
 type SettingsPageProps = {
-  searchParams: Promise<{ steam?: string }>;
+  searchParams: Promise<{ steam?: string; twitch?: string }>;
 };
 
 export default async function SettingsPage({ searchParams }: SettingsPageProps) {
@@ -20,7 +21,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
     redirect("/sign-in");
   }
 
-  const { steam } = await searchParams;
+  const { steam, twitch } = await searchParams;
 
   const memberSince = new Intl.DateTimeFormat("en-US", {
     month: "long",
@@ -53,8 +54,23 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
       {steam === "taken" && (
         <Banner variant="error">That Steam account is already linked to another Ranked account.</Banner>
       )}
+      {steam === "last_identity" && (
+        <Banner variant="error">Steam is the only way you sign in — link Twitch before unlinking it.</Banner>
+      )}
+      {twitch === "error" && (
+        <Banner variant="error">Something went wrong linking your Twitch account. Please try again.</Banner>
+      )}
+      {twitch === "taken" && (
+        <Banner variant="error">That Twitch account is already linked to another Ranked account.</Banner>
+      )}
 
-      <SteamLink steamId={user.steamId} steamPersonaName={user.steamPersonaName} steamAvatarUrl={user.steamAvatarUrl} />
+      <TwitchLink twitchId={user.twitchId} username={user.username} avatarUrl={user.avatarUrl} />
+      <SteamLink
+        steamId={user.steamId}
+        steamPersonaName={user.steamPersonaName}
+        steamAvatarUrl={user.steamAvatarUrl}
+        canUnlink={Boolean(user.twitchId)}
+      />
 
       <SignOutButton />
     </div>

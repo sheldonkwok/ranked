@@ -1,7 +1,6 @@
 import { generateState } from "arctic";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/session";
 import { buildSteamAuthUrl, getAppUrl } from "@/lib/steam";
 
 // Short-lived, single-use cookie that ties the callback request back to the
@@ -11,12 +10,11 @@ import { buildSteamAuthUrl, getAppUrl } from "@/lib/steam";
 const STATE_COOKIE_NAME = "steam_openid_state";
 const STATE_COOKIE_MAX_AGE_SECONDS = 60 * 10; // 10 minutes
 
-export async function GET(request: Request) {
-  const user = await getCurrentUser();
-  if (!user) {
-    return NextResponse.redirect(new URL("/sign-in", request.url));
-  }
-
+// No auth guard here, unlike the old link-only version of this route: Steam
+// is now also a sign-in method. Whether this becomes a "sign in" or a "link
+// to my account" is decided in the callback, by whether a session already
+// exists there (src/app/api/auth/steam/callback/route.ts).
+export async function GET() {
   const appUrl = getAppUrl();
   const state = generateState();
 

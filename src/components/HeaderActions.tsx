@@ -48,10 +48,12 @@ export default function HeaderActions({
         ) : (
           <div className="cover-hatch h-6 w-6 border border-edge/60" />
         )}
-        {/* The username is the only elastic element in the header — hide it
+        {/* The name is the only elastic element in the header — hide it
             below 360px, where the header would otherwise overflow. The
-            avatar alone still links to /settings. */}
-        <span className="text-[13px] text-ink-muted mobile-xs:hidden">{username}</span>
+            avatar alone still links to /settings. Prefer displayName: a
+            Steam-only account's username defaults to "steam-<id>", which
+            displayName (the Steam persona) is far more readable than. */}
+        <span className="text-[13px] text-ink-muted mobile-xs:hidden">{displayName ?? username}</span>
       </Link>
     </div>
   );

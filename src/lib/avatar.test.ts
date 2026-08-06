@@ -62,6 +62,12 @@ describe("withResolvedAvatar", () => {
     expect(withResolvedAvatar(user).avatarUrl).toBe(STEAM_AVATAR);
   });
 
+  it("resolves a Steam-only account (no twitchId) to its Steam avatar", () => {
+    const user = makeUser({ twitchId: null, avatarUrl: null, steamAvatarUrl: STEAM_AVATAR });
+
+    expect(withResolvedAvatar(user).avatarUrl).toBe(STEAM_AVATAR);
+  });
+
   it("stays null when neither avatar is available", () => {
     const user = makeUser({ avatarUrl: null, steamAvatarUrl: null });
 

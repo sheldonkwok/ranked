@@ -158,6 +158,17 @@ export function steamProfileUrl(steamId: string): string {
   return `https://steamcommunity.com/profiles/${steamId}`;
 }
 
+/**
+ * Default `users.username` for an account created via Steam sign-in (no
+ * Steam persona name survives as a URL-safe, collision-resistant handle on
+ * its own). A SteamID64 is unique and the `steam-` prefix contains a hyphen,
+ * which a Twitch login ([A-Za-z0-9_] only) can never produce — so this can't
+ * collide with a Twitch-derived username.
+ */
+export function steamUsername(steamId: string): string {
+  return `steam-${steamId}`;
+}
+
 /** Thrown by `fetchSteamLibrary` when `STEAM_API_KEY` isn't set — unlike the
  * persona lookup, a library import has nothing useful to fall back to. */
 export class SteamNotConfiguredError extends Error {

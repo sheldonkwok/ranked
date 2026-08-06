@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildSteamAuthUrl, buildVerificationBody, extractSteamId } from "./steam";
+import { buildSteamAuthUrl, buildVerificationBody, extractSteamId, steamUsername } from "./steam";
 
 const RETURN_TO = "http://localhost:3000/api/auth/steam/callback?state=abc123";
 const REALM = "http://localhost:3000";
@@ -85,5 +85,15 @@ describe("extractSteamId", () => {
         RETURN_TO
       )
     ).toBeNull();
+  });
+});
+
+describe("steamUsername", () => {
+  it("prefixes the SteamID64 with steam-", () => {
+    expect(steamUsername("76561197960287930")).toBe("steam-76561197960287930");
+  });
+
+  it("never produces the same username for two different SteamIDs", () => {
+    expect(steamUsername("76561197960287930")).not.toBe(steamUsername("76561197960287931"));
   });
 });

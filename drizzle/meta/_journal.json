@@ -22,6 +22,13 @@
       "when": 1785914828451,
       "tag": "0002_strange_terror",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1785982555539,
+      "tag": "0003_stormy_the_fury",
+      "breakpoints": true
     }
   ]
 }

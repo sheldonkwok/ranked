@@ -5,9 +5,14 @@ type SteamLinkProps = {
   steamId: string | null;
   steamPersonaName: string | null;
   steamAvatarUrl: string | null;
+  // False when Steam is this account's only identity — unlinking would trip
+  // the users_identity_required check (src/db/schema.ts) and lock the user
+  // out, so the unlink route already refuses it; hiding the button here is
+  // just to not offer an action that will bounce back with an error.
+  canUnlink: boolean;
 };
 
-export default function SteamLink({ steamId, steamPersonaName, steamAvatarUrl }: SteamLinkProps) {
+export default function SteamLink({ steamId, steamPersonaName, steamAvatarUrl, canUnlink }: SteamLinkProps) {
   return (
     <div className="flex w-full flex-col gap-3 border-t border-edge/35 pt-6">
       <p className="text-xs tracking-[1px] text-ink-faint">STEAM</p>
@@ -28,11 +33,15 @@ export default function SteamLink({ steamId, steamPersonaName, steamAvatarUrl }:
             )}
             <span className="text-sm text-ink-muted">{steamPersonaName ?? steamId}</span>
           </a>
-          <form method="post" action="/api/auth/steam/unlink">
-            <button type="submit" className="pixel-btn-ghost pixel-btn-ghost-danger">
-              UNLINK
-            </button>
-          </form>
+          {canUnlink ? (
+            <form method="post" action="/api/auth/steam/unlink">
+              <button type="submit" className="pixel-btn-ghost pixel-btn-ghost-danger">
+                UNLINK
+              </button>
+            </form>
+          ) : (
+            <span className="text-xs tracking-[1px] text-ink-faint">SIGN-IN METHOD</span>
+          )}
         </div>
       ) : (
         <a href="/api/auth/steam" className="pixel-btn text-center">

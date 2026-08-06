@@ -1,5 +1,6 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
+  check,
   index,
   integer,
   jsonb,
@@ -14,23 +15,38 @@ import {
 
 export const tierEnum = pgEnum("tier", ["liked", "fine", "disliked"]);
 
-export const users = pgTable("users", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  twitchId: text("twitch_id").notNull().unique(),
-  username: text("username").notNull(),
-  displayName: text("display_name"),
-  avatarUrl: text("avatar_url"),
-  // SteamID64, verified via Steam OpenID sign-in. Nullable — not every user
-  // links Steam. Unique so two Ranked accounts can't claim the same Steam
-  // account.
-  steamId: text("steam_id").unique(),
-  steamPersonaName: text("steam_persona_name"),
-  steamAvatarUrl: text("steam_avatar_url"),
-  steamLinkedAt: timestamp("steam_linked_at"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+export const users = pgTable(
+  "users",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    // Nullable — an account can be Twitch-only, Steam-only, or both. See the
+    // `users_identity_required` check below: at least one must be set.
+    twitchId: text("twitch_id").unique(),
+    username: text("username").notNull(),
+    displayName: text("display_name"),
+    avatarUrl: text("avatar_url"),
+    // SteamID64, verified via Steam OpenID sign-in. Nullable — not every user
+    // links Steam. Unique so two Ranked accounts can't claim the same Steam
+    // account.
+    steamId: text("steam_id").unique(),
+    steamPersonaName: text("steam_persona_name"),
+    steamAvatarUrl: text("steam_avatar_url"),
+    steamLinkedAt: timestamp("steam_linked_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    // A user with neither identity could never sign in again — the unlink
+    // route (api/auth/steam/unlink) must refuse to null out someone's last
+    // remaining identity, and this is the backstop if it doesn't.
+    check("users_identity_required", sql`${table.twitchId} IS NOT NULL OR ${table.steamId} IS NOT NULL`),
+    // /u/[username] resolves case-insensitively (src/lib/users.ts) — without
+    // this a rename (Twitch) or a Steam persona default could collide with
+    // another user's public profile URL.
+    uniqueIndex("users_username_lower_unique").on(sql`lower(${table.username})`),
+  ]
+);
 
 export const sessions = pgTable("sessions", {
   // sha256 hex digest of the session token, computed app-side

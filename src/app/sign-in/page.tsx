@@ -35,6 +35,13 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
         >
           Continue with Twitch
         </a>
+
+        <a
+          href="/api/auth/steam"
+          className="flex w-full items-center justify-center gap-2 border border-[#66c0f4] bg-[#1b2838] px-4 py-3 text-sm tracking-[1px] text-white uppercase transition-colors hover:bg-[#25415a] active:translate-y-0.5"
+        >
+          Continue with Steam
+        </a>
       </div>
     </div>
   );
