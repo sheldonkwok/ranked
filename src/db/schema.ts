@@ -3,10 +3,10 @@ import {
   check,
   index,
   integer,
-  jsonb,
   numeric,
   pgEnum,
   pgTable,
+  primaryKey,
   serial,
   text,
   timestamp,
@@ -58,7 +58,6 @@ export const games = pgTable(
     name: text("name").notNull(),
     coverImageId: text("cover_image_id"),
     firstReleaseDate: timestamp("first_release_date"),
-    platforms: jsonb("platforms").$type<string[]>(),
     summary: text("summary"),
     // Steam appid this row was resolved from, cached to skip the IGDB round trip later; deliberately NOT unique since a base game and its edition can share one IGDB id.
     steamAppId: integer("steam_app_id"),
@@ -72,6 +71,30 @@ export const steamAppMisses = pgTable("steam_app_misses", {
   steamAppId: integer("steam_app_id").primaryKey(),
   checkedAt: timestamp("checked_at").notNull().defaultNow(),
 });
+
+export const platforms = pgTable("platforms", {
+  id: serial("id").primaryKey(),
+  igdbId: integer("igdb_id").notNull().unique(),
+  name: text("name").notNull(),
+  // IGDB leaves this unset for some platforms; consumers fall back to `name`.
+  abbreviation: text("abbreviation"),
+});
+
+export const gamePlatforms = pgTable(
+  "game_platforms",
+  {
+    gameId: integer("game_id")
+      .notNull()
+      .references(() => games.id, { onDelete: "cascade" }),
+    platformId: integer("platform_id")
+      .notNull()
+      .references(() => platforms.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    primaryKey({ columns: [table.gameId, table.platformId] }),
+    index("game_platforms_platform_id_idx").on(table.platformId),
+  ]
+);
 
 export const entries = pgTable(
   "entries",
@@ -111,6 +134,7 @@ export const sessionsRelations = relations(sessions, ({ one }) => ({
 
 export const gamesRelations = relations(games, ({ many }) => ({
   entries: many(entries),
+  platforms: many(gamePlatforms),
 }));
 
 export const entriesRelations = relations(entries, ({ one }) => ({
@@ -121,6 +145,21 @@ export const entriesRelations = relations(entries, ({ one }) => ({
   game: one(games, {
     fields: [entries.gameId],
     references: [games.id],
+  }),
+}));
+
+export const platformsRelations = relations(platforms, ({ many }) => ({
+  games: many(gamePlatforms),
+}));
+
+export const gamePlatformsRelations = relations(gamePlatforms, ({ one }) => ({
+  game: one(games, {
+    fields: [gamePlatforms.gameId],
+    references: [games.id],
+  }),
+  platform: one(platforms, {
+    fields: [gamePlatforms.platformId],
+    references: [platforms.id],
   }),
 }));
 
@@ -135,6 +174,12 @@ export type NewGame = typeof games.$inferInsert;
 
 export type SteamAppMiss = typeof steamAppMisses.$inferSelect;
 export type NewSteamAppMiss = typeof steamAppMisses.$inferInsert;
+
+export type Platform = typeof platforms.$inferSelect;
+export type NewPlatform = typeof platforms.$inferInsert;
+
+export type GamePlatform = typeof gamePlatforms.$inferSelect;
+export type NewGamePlatform = typeof gamePlatforms.$inferInsert;
 
 export type Entry = typeof entries.$inferSelect;
 export type NewEntry = typeof entries.$inferInsert;

@@ -11,6 +11,11 @@ never entered by hand.
 ## Rules
 - Never git commit unless you're the cloud agent
 - Maximum one line comments. Do not have several consecutive lines
+- Never run database migrations, backfill scripts, or anything else that applies schema
+  changes to a real database — this includes starting `next dev` or running `pnpm build`,
+  since `getDb()` auto-migrates `./dev-db` on first access. Generate migration files
+  (`pnpm db:generate` only diffs against `drizzle/meta/*`, no DB connection) and hand the
+  user the commands to run themselves.
 
 ## Stack
 
@@ -28,7 +33,10 @@ never entered by hand.
 - `pnpm dev` / `pnpm build` / `pnpm lint` / `pnpm test`
 - `pnpm lint` runs Biome (`biome check`, lint + format check); `pnpm format` applies fixes
 - `pnpm db:generate` — drizzle-kit generate after editing `src/db/schema.ts`
-- `pnpm db:migrate:prod` — apply migrations (needs direct `POSTGRES_URL_NON_POOLING`)
+- `pnpm db:migrate:prod` — apply migrations (needs direct `POSTGRES_URL_NON_POOLING`);
+  `--to <tag>` applies only up through that migration (see `scripts/migrate-to.ts`)
+- `pnpm db:backfill-platforms` — one-shot script that seeds `platforms` from IGDB and links
+  it against the (deprecated) `games.platforms` jsonb; see the Rules section above
 - `pnpm db:reset` — delete the local PGlite data dir
 
 ## Layout
@@ -47,13 +55,17 @@ never entered by hand.
 
 - `users` — text UUID PK, unique `twitchId`, Twitch profile fields.
 - `sessions` — PK is the SHA-256 hex of the client token; FK to users (cascade).
-- `games` — IGDB cache: unique `igdbId`, name, cover, release date, platforms (jsonb),
-  optional `steamAppId` (indexed, not unique — an edition and its base game can share an
-  IGDB id). Set the first time a Steam library entry is joined against IGDB
-  (`api/games/steam-library`), so later requests read the join from Postgres instead of
-  re-querying IGDB. Always upsert through `upsertGame(s)` (`src/lib/games.ts`), never
-  write `games` directly — it `coalesce`s `steamAppId` so a search-add upsert can't wipe
-  out a Steam-learned value.
+- `games` — IGDB cache: unique `igdbId`, name, cover, release date, optional `steamAppId`
+  (indexed, not unique — an edition and its base game can share an IGDB id). Set the first
+  time a Steam library entry is joined against IGDB (`api/games/steam-library`), so later
+  requests read the join from Postgres instead of re-querying IGDB. Always upsert through
+  `upsertGame(s)` (`src/lib/games.ts`), never write `games` directly — it `coalesce`s
+  `steamAppId` so a search-add upsert can't wipe out a Steam-learned value.
+- `platforms` — IGDB's platform list (unique `igdbId`, name, abbreviation), linked to
+  `games` many-to-many through `gamePlatforms`. Written only through `upsertGame(s)`, which
+  delete-and-reinserts a game's links on every upsert so a platform IGDB drops propagates.
+  Use `platformLabel`/`getPlatformLabels` (`src/lib/games.ts`) to render — abbreviation when
+  present, else the full name.
 - `entries` — one per user+game (unique index), with `tier`, `position`, `score`.
 - `steamAppMisses` — negative cache of Steam appids with no IGDB match (tools, SDKs,
   soundtracks), keyed by `steamAppId` with a `checkedAt` TTL (`STEAM_MISS_TTL_MS` in

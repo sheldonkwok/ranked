@@ -29,6 +29,20 @@
       "when": 1785982555539,
       "tag": "0003_stormy_the_fury",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1786215733427,
+      "tag": "0004_familiar_firelord",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1786215899042,
+      "tag": "0005_colorful_tombstone",
+      "breakpoints": true
     }
   ]
 }

@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { ApiError, badRequest, releaseYearOf, withErrorHandling } from "@/app/api/_lib/handler";
 import { entries, games, getDb } from "@/db";
+import { platformLabel } from "@/lib/games";
 import { getFranchiseGames, type IgdbGame } from "@/lib/igdb";
 import { requireUser } from "@/lib/session";
 
@@ -51,6 +52,7 @@ export async function GET(request: NextRequest) {
           ...game,
           firstReleaseDate: game.firstReleaseDate ? game.firstReleaseDate.toISOString() : null,
           releaseYear: releaseYearOf(game.firstReleaseDate),
+          platforms: game.platforms.map(platformLabel),
         })),
     });
   });

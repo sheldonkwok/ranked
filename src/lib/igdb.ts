@@ -106,12 +106,18 @@ async function igdbRequest<T>(endpoint: string, body: string): Promise<T> {
   return (await res.json()) as T;
 }
 
+export type IgdbPlatform = {
+  igdbId: number;
+  name: string;
+  abbreviation: string | null;
+};
+
 export type IgdbGame = {
   igdbId: number;
   name: string;
   coverImageId: string | null;
   firstReleaseDate: Date | null; // IGDB returns unix seconds
-  platforms: string[]; // platform abbreviations, [] if none
+  platforms: IgdbPlatform[];
   summary: string | null;
   totalRatingCount: number;
 };
@@ -121,13 +127,13 @@ type RawIgdbGame = {
   name: string;
   cover?: { image_id: string } | null;
   first_release_date?: number | null;
-  platforms?: { abbreviation?: string }[] | null;
+  platforms?: { id: number; name: string; abbreviation?: string | null }[] | null;
   summary?: string | null;
   total_rating_count?: number | null;
 };
 
 const GAME_FIELDS =
-  "fields name, cover.image_id, first_release_date, platforms.abbreviation, summary, total_rating_count;";
+  "fields name, cover.image_id, first_release_date, platforms.id, platforms.name, platforms.abbreviation, summary, total_rating_count;";
 // Wider than the number of results shown client-side, since already-ranked games are filtered out server-side after this fetch.
 const SEARCH_FETCH_LIMIT = 30;
 // Main games, DLC, expansions, bundles, editions, ports, remakes, remasters — excludes episode/season/mod/pack, which floods naive search.
@@ -140,10 +146,31 @@ function normalizeGame(raw: RawIgdbGame): IgdbGame {
     name: raw.name,
     coverImageId: raw.cover?.image_id ?? null,
     firstReleaseDate: typeof raw.first_release_date === "number" ? new Date(raw.first_release_date * 1000) : null,
-    platforms: (raw.platforms ?? []).map((p) => p.abbreviation).filter((abbr): abbr is string => Boolean(abbr)),
+    platforms: (raw.platforms ?? []).map((p) => ({
+      igdbId: p.id,
+      name: p.name,
+      abbreviation: p.abbreviation ?? null,
+    })),
     summary: raw.summary ?? null,
     totalRatingCount: raw.total_rating_count ?? 0,
   };
+}
+
+type RawIgdbPlatform = { id: number; name: string; abbreviation?: string | null };
+
+// IGDB has ~220 platforms; paginated defensively in case that grows past one page.
+const PLATFORM_FETCH_LIMIT = 500;
+
+/** Fetches every platform IGDB knows about — used to seed the `platforms` table, not the per-game path. */
+export async function getAllPlatforms(): Promise<IgdbPlatform[]> {
+  const platforms: IgdbPlatform[] = [];
+  for (let offset = 0; ; offset += PLATFORM_FETCH_LIMIT) {
+    const body = `fields id, name, abbreviation; sort id asc; limit ${PLATFORM_FETCH_LIMIT}; offset ${offset};`;
+    const page = await igdbRequest<RawIgdbPlatform[]>("platforms", body);
+    platforms.push(...page.map((p) => ({ igdbId: p.id, name: p.name, abbreviation: p.abbreviation ?? null })));
+    if (page.length < PLATFORM_FETCH_LIMIT) break;
+  }
+  return platforms;
 }
 
 function escapeApicalypseString(value: string): string {

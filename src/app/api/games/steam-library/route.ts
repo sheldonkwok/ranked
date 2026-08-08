@@ -2,7 +2,7 @@ import { and, eq, gt, inArray } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { badRequest, releaseYearOf, withErrorHandling } from "@/app/api/_lib/handler";
 import { entries, type Game, games, getDb, steamAppMisses } from "@/db";
-import { type GameUpsert, upsertGames } from "@/lib/games";
+import { type GameUpsert, getPlatformLabels, platformLabel, upsertGames } from "@/lib/games";
 import { IGDB_MULTIQUERY_MAX, type IgdbGame, resolveGamesByName } from "@/lib/igdb";
 import { requireUser } from "@/lib/session";
 import { fetchSteamLibrary, SteamNotConfiguredError } from "@/lib/steam";
@@ -24,13 +24,13 @@ type LibraryMatch = {
   playtimeForever: number;
 };
 
-function gameRowToMatch(row: Game, playtimeForever: number): LibraryMatch {
+function gameRowToMatch(row: Game, platforms: string[], playtimeForever: number): LibraryMatch {
   return {
     igdbId: row.igdbId,
     name: row.name,
     coverImageId: row.coverImageId,
     firstReleaseDate: row.firstReleaseDate,
-    platforms: row.platforms ?? [],
+    platforms,
     summary: row.summary,
     playtimeForever,
   };
@@ -42,7 +42,7 @@ function igdbGameToMatch(game: IgdbGame, playtimeForever: number): LibraryMatch 
     name: game.name,
     coverImageId: game.coverImageId,
     firstReleaseDate: game.firstReleaseDate,
-    platforms: game.platforms,
+    platforms: game.platforms.map(platformLabel),
     summary: game.summary,
     playtimeForever,
   };
@@ -81,6 +81,10 @@ export async function GET() {
 
     const cachedRows =
       scanAppIds.length > 0 ? await db.select().from(games).where(inArray(games.steamAppId, scanAppIds)) : [];
+    const cachedPlatformLabels = await getPlatformLabels(
+      db,
+      cachedRows.map((row) => row.id)
+    );
 
     const missRows =
       scanAppIds.length > 0
@@ -142,7 +146,7 @@ export async function GET() {
           seenIgdbIds.add(igdbId);
           results.push(
             cachedRow
-              ? gameRowToMatch(cachedRow, steamGame.playtimeForever)
+              ? gameRowToMatch(cachedRow, cachedPlatformLabels.get(cachedRow.id) ?? [], steamGame.playtimeForever)
               : igdbGameToMatch(resolvedGame as IgdbGame, steamGame.playtimeForever)
           );
         }
@@ -163,18 +167,20 @@ export async function GET() {
       const uniqueMisses = Array.from(new Set(newMisses));
 
       try {
-        if (uniqueResolved.size > 0) {
-          await upsertGames(db, Array.from(uniqueResolved.values()));
-        }
-        if (uniqueMisses.length > 0) {
-          await db
-            .insert(steamAppMisses)
-            .values(uniqueMisses.map((steamAppId) => ({ steamAppId })))
-            .onConflictDoUpdate({
-              target: steamAppMisses.steamAppId,
-              set: { checkedAt: new Date() },
-            });
-        }
+        await db.transaction(async (tx) => {
+          if (uniqueResolved.size > 0) {
+            await upsertGames(tx, Array.from(uniqueResolved.values()));
+          }
+          if (uniqueMisses.length > 0) {
+            await tx
+              .insert(steamAppMisses)
+              .values(uniqueMisses.map((steamAppId) => ({ steamAppId })))
+              .onConflictDoUpdate({
+                target: steamAppMisses.steamAppId,
+                set: { checkedAt: new Date() },
+              });
+          }
+        });
       } catch (err) {
         // A caching failure shouldn't turn an otherwise-successful response into a 502 — worst case, the next request just re-resolves.
         console.error("Failed to cache Steam library matches:", err);

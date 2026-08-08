@@ -23,7 +23,7 @@ export function scoresUnlocked(entryCount: number): boolean {
   return entryCount >= SCORE_UNLOCK_THRESHOLD;
 }
 
-/** The subset of a game's columns the ranked-list read path actually needs — narrower than `Game` to keep TOAST-able columns (summary, platforms) off the hottest query. */
+/** The subset of a game's columns the ranked-list read path actually needs — narrower than `Game` to keep TOAST-able columns (summary) off the hottest query. */
 export type RankedEntryGame = Pick<Game, "id" | "igdbId" | "name" | "coverImageId" | "firstReleaseDate">;
 
 export type RankedEntry = {
