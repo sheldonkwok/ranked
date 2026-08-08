@@ -77,9 +77,9 @@ export default function EntryRow({
         </div>
       ) : (
         <Link
-          href={`/add?related=${encodeURIComponent(name)}`}
+          href={`/add?franchise=${encodeURIComponent(name)}`}
           className={`${entryLink} ${entryLinkFocus}`}
-          aria-label={`Find games like ${name}`}
+          aria-label={`More games in the ${name} franchise`}
         >
           <EntryCoverAndTitle coverImageId={coverImageId} name={name} releaseYear={releaseYear} />
         </Link>

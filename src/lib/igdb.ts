@@ -202,30 +202,35 @@ export async function getGameByIgdbId(igdbId: number): Promise<IgdbGame | null> 
   return results.length > 0 ? normalizeGame(results[0]) : null;
 }
 
-// Wider than SIMILAR_RESULT_LIMIT in the API route, since already-ranked games are filtered out server-side after this fetch.
-const SIMILAR_FETCH_LIMIT = 20;
+// Narrower than GAME_TYPES: main games, remakes, remasters, ports. DLC and bundles dominate a raw franchise listing.
+const FRANCHISE_GAME_TYPES = "(0,8,9,11)";
+// Wider than FRANCHISE_RESULT_LIMIT in the API route, since already-ranked games are filtered out server-side after this fetch.
+const FRANCHISE_FETCH_LIMIT = 30;
 
-type RawSimilarGames = { id: number; similar_games?: number[] | null };
+type GameGroup = { id: number; name: string };
+type RawGameGroups = { id: number; collections?: GameGroup[] | null; franchises?: GameGroup[] | null };
 
-/** Restores `games` to the order of `ids` (a `where id = (...)` fetch returns arbitrary order); ids with no match are skipped. */
-export function sortByIdOrder(games: IgdbGame[], ids: number[]): IgdbGame[] {
-  const byId = new Map(games.map((game) => [game.igdbId, game]));
-  return ids.map((id) => byId.get(id)).filter((game): game is IgdbGame => game !== undefined);
-}
+export type FranchiseGames = { franchiseName: string | null; games: IgdbGame[] };
 
-/** Games IGDB considers similar to `igdbId`, in relevance order — two requests: the id list, then full records re-sorted to match. */
-export async function getSimilarGames(igdbId: number): Promise<IgdbGame[]> {
+/** Other games in `igdbId`'s series — prefers the tighter `collections` grouping, falling back to the broader `franchises` (which pulls in crossover cameos) only when a game has no collection. */
+export async function getFranchiseGames(igdbId: number): Promise<FranchiseGames> {
   if (!Number.isInteger(igdbId) || igdbId <= 0) {
-    throw new Error(`getSimilarGames: igdbId must be a positive integer, got ${igdbId}`);
+    throw new Error(`getFranchiseGames: igdbId must be a positive integer, got ${igdbId}`);
   }
 
-  const idRows = await igdbRequest<RawSimilarGames[]>("games", `fields similar_games; where id = ${igdbId}; limit 1;`);
-  const ids = idRows[0]?.similar_games ?? [];
-  if (ids.length === 0) return [];
+  const groupRows = await igdbRequest<RawGameGroups[]>(
+    "games",
+    `fields collections.name, franchises.name; where id = ${igdbId}; limit 1;`
+  );
+  const collections = groupRows[0]?.collections ?? [];
+  const field = collections.length > 0 ? "collections" : "franchises";
+  const groups = collections.length > 0 ? collections : (groupRows[0]?.franchises ?? []);
+  if (groups.length === 0) return { franchiseName: null, games: [] };
 
-  const body = `${GAME_FIELDS} where id = (${ids.join(",")}) & version_parent = null & game_type = ${GAME_TYPES}; limit ${SIMILAR_FETCH_LIMIT};`;
+  const ids = groups.map((group) => group.id);
+  const body = `${GAME_FIELDS} where ${field} = (${ids.join(",")}) & id != ${igdbId} & version_parent = null & game_type = ${FRANCHISE_GAME_TYPES} & total_rating_count > 0 & cover != null; sort total_rating_count desc; limit ${FRANCHISE_FETCH_LIMIT};`;
   const games = (await igdbRequest<RawIgdbGame[]>("games", body)).map(normalizeGame);
-  return sortByIdOrder(games, ids);
+  return { franchiseName: groups[0].name, games };
 }
 
 // Steam library name resolution: Steam and IGDB titles frequently disagree, so resolving a Steam name is two passes — an exact-ish `name`/`alternative_names` match, then a wildcard fallback used only as a candidate generator re-verified by `pickBestMatch` (an unverified top-1 pick is worse than no match).

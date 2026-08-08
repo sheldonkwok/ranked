@@ -8,17 +8,17 @@ export const metadata: Metadata = {
 };
 
 type AddPageProps = {
-  searchParams: Promise<{ related?: string }>;
+  searchParams: Promise<{ franchise?: string }>;
 };
 
 export default async function AddPage({ searchParams }: AddPageProps) {
   const user = await getCurrentUser();
-  const { related } = await searchParams;
+  const { franchise } = await searchParams;
 
   return (
     <div className="mx-auto flex max-w-[660px] flex-col gap-5">
       <h1 className={heading({ className: "text-[18px]" })}>ADD A GAME</h1>
-      <AddFlow steamLinked={Boolean(user?.steamId)} relatedTo={related?.trim() || null} />
+      <AddFlow steamLinked={Boolean(user?.steamId)} franchiseOf={franchise?.trim() || null} />
     </div>
   );
 }
