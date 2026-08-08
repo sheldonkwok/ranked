@@ -156,23 +156,6 @@ function normalizeGame(raw: RawIgdbGame): IgdbGame {
   };
 }
 
-type RawIgdbPlatform = { id: number; name: string; abbreviation?: string | null };
-
-// IGDB has ~220 platforms; paginated defensively in case that grows past one page.
-const PLATFORM_FETCH_LIMIT = 500;
-
-/** Fetches every platform IGDB knows about — used to seed the `platforms` table, not the per-game path. */
-export async function getAllPlatforms(): Promise<IgdbPlatform[]> {
-  const platforms: IgdbPlatform[] = [];
-  for (let offset = 0; ; offset += PLATFORM_FETCH_LIMIT) {
-    const body = `fields id, name, abbreviation; sort id asc; limit ${PLATFORM_FETCH_LIMIT}; offset ${offset};`;
-    const page = await igdbRequest<RawIgdbPlatform[]>("platforms", body);
-    platforms.push(...page.map((p) => ({ igdbId: p.id, name: p.name, abbreviation: p.abbreviation ?? null })));
-    if (page.length < PLATFORM_FETCH_LIMIT) break;
-  }
-  return platforms;
-}
-
 function escapeApicalypseString(value: string): string {
   return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 }

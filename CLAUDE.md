@@ -33,10 +33,7 @@ never entered by hand.
 - `pnpm dev` / `pnpm build` / `pnpm lint` / `pnpm test`
 - `pnpm lint` runs Biome (`biome check`, lint + format check); `pnpm format` applies fixes
 - `pnpm db:generate` — drizzle-kit generate after editing `src/db/schema.ts`
-- `pnpm db:migrate:prod` — apply migrations (needs direct `POSTGRES_URL_NON_POOLING`);
-  `--to <tag>` applies only up through that migration (see `scripts/migrate-to.ts`)
-- `pnpm db:backfill-platforms` — one-shot script that seeds `platforms` from IGDB and links
-  it against the (deprecated) `games.platforms` jsonb; see the Rules section above
+- `pnpm db:migrate:prod` — apply migrations (needs direct `POSTGRES_URL_NON_POOLING`)
 - `pnpm db:reset` — delete the local PGlite data dir
 
 ## Layout

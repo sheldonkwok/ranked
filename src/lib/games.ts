@@ -68,7 +68,7 @@ async function syncGamePlatforms(db: DbOrTx, upserts: GameUpsert[], rows: Game[]
   }
 }
 
-/** Upserts a batch of IGDB games in a single statement, keyed on `igdbId`; `steamAppId` is `coalesce`d so a search-add upsert can't clobber a Steam-learned value. */
+/** Upserts a batch of IGDB games and their platform links, keyed on `igdbId`; `steamAppId` is `coalesce`d so a search-add upsert can't clobber a Steam-learned value. */
 export async function upsertGames(db: DbOrTx, upserts: GameUpsert[]): Promise<Game[]> {
   if (upserts.length === 0) return [];
 
