@@ -264,11 +264,19 @@ describe("removeEntry", () => {
 
 describe("getRankedEntries", () => {
   it("orders globally by tier (liked, fine, disliked) then by position", async () => {
-    const [liked1, liked2, fine1, disliked1] = await seedGames(["Liked1", "Liked2", "Fine1", "Disliked1"]);
+    const [liked1, liked2, fine1, disliked1, disliked2] = await seedGames([
+      "Liked1",
+      "Liked2",
+      "Fine1",
+      "Disliked1",
+      "Disliked2",
+    ]);
 
     await db.transaction(async (tx) => {
-      // Insert out of tier order to prove sorting isn't insertion-order dependent.
+      // Insert out of tier order, and the two disliked entries out of position order, to prove sorting isn't
+      // insertion-order dependent on either axis (exercises the entries.tier, entries.position ORDER BY).
       await insertEntry(tx, USER_ID, disliked1.id, "disliked", 0);
+      await insertEntry(tx, USER_ID, disliked2.id, "disliked", 0); // prepends -> disliked2 ends up before disliked1
       await insertEntry(tx, USER_ID, fine1.id, "fine", 0);
       await insertEntry(tx, USER_ID, liked1.id, "liked", 0);
       await insertEntry(tx, USER_ID, liked2.id, "liked", 1);
@@ -276,9 +284,10 @@ describe("getRankedEntries", () => {
 
     const ranked = await getRankedEntries(db, USER_ID);
 
-    expect(ranked.map((r) => r.game.name)).toEqual(["Liked1", "Liked2", "Fine1", "Disliked1"]);
+    expect(ranked.map((r) => r.game.name)).toEqual(["Liked1", "Liked2", "Fine1", "Disliked2", "Disliked1"]);
     expect(ranked.every((r) => typeof r.score === "number")).toBe(true);
-    expect(ranked.map((r) => r.tier)).toEqual(["liked", "liked", "fine", "disliked"]);
+    expect(ranked.map((r) => r.tier)).toEqual(["liked", "liked", "fine", "disliked", "disliked"]);
+    expect(ranked.map((r) => r.position)).toEqual([0, 1, 0, 0, 1]);
   });
 });
 
@@ -298,5 +307,66 @@ describe("getTierEntries", () => {
 
     const excluded = await getTierEntries(db, USER_ID, "fine", ids[1]);
     expect(excluded.map((r) => r.game.name)).toEqual(["A", "C"]);
+    // Excluding a candidate from the read must not change the remaining entries' stored scores.
+    expect(excluded.map((r) => r.score)).toEqual([all[0].score, all[2].score]);
+  });
+});
+
+describe("recomputeTierScores SQL parity with computeScore", () => {
+  // The set-based recompute SQL replaces a per-row JS loop, and must reproduce computeScore's
+  // IEEE-754 double math bit-for-bit — exact `numeric` arithmetic disagrees at .05 ties. 7 and 65
+  // are the load-bearing sizes: the first n at which float and exact-decimal rounding diverge for
+  // "disliked" and "fine" respectively, so they'd catch a future "clean this up with numeric" regression.
+  for (const tier of TIER_ORDER) {
+    for (const n of [1, 2, 3, 7, 10, 65, 100]) {
+      it(`matches computeScore for ${tier} with ${n} entries`, async () => {
+        const gamesList = await seedGames(Array.from({ length: n }, (_, i) => `${tier}-${n}-${i}`));
+
+        await db.transaction(async (tx) => {
+          for (let i = 0; i < gamesList.length; i++) {
+            await insertEntry(tx, USER_ID, gamesList[i].id, tier, i);
+          }
+        });
+
+        const rows = await tierRows(tier);
+        expect(rows.map((r) => r.position)).toEqual([...Array(n).keys()]);
+        expect(rows.map((r) => Number(r.score))).toEqual([...Array(n).keys()].map((i) => computeScore(i, n, tier)));
+      });
+    }
+  }
+
+  it("pins the float-rounding boundary: disliked index 5 of 7 is 0.5, not 0.6", async () => {
+    // raw = 0.5499999999999998 in IEEE-754 doubles, so *10 = 5.499999999999998 rounds DOWN.
+    // Exact decimal arithmetic would give 5.5 -> 0.6. The SQL must reproduce the float path.
+    const gamesList = await seedGames(Array.from({ length: 7 }, (_, i) => `D${i}`));
+
+    await db.transaction(async (tx) => {
+      for (let i = 0; i < gamesList.length; i++) {
+        await insertEntry(tx, USER_ID, gamesList[i].id, "disliked", i);
+      }
+    });
+
+    const rows = await tierRows("disliked");
+    expect(rows.map((r) => Number(r.score))).toEqual([3.3, 2.8, 2.2, 1.7, 1.1, 0.5, 0.0]);
+  });
+
+  it("does not bump updated_at even when a recompute changes a row's score", async () => {
+    const [g1, g2] = await seedGames(["A", "B"]);
+
+    let entry1Id = 0;
+    await db.transaction(async (tx) => {
+      entry1Id = await insertEntry(tx, USER_ID, g1.id, "liked", 0);
+    });
+    const [before] = await db.select().from(schema.entries).where(eq(schema.entries.id, entry1Id));
+
+    // Prepending a sibling into the same tier pushes entry1 from index 0 (score = hi) to index 1 (score = lo),
+    // so its score is rewritten — but recomputeTierScores must not touch updated_at, matching the old loop's behavior.
+    await db.transaction(async (tx) => {
+      await insertEntry(tx, USER_ID, g2.id, "liked", 0);
+    });
+    const [after] = await db.select().from(schema.entries).where(eq(schema.entries.id, entry1Id));
+
+    expect(after.score).not.toBe(before.score);
+    expect(after.updatedAt.getTime()).toBe(before.updatedAt.getTime());
   });
 });

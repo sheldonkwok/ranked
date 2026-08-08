@@ -23,19 +23,16 @@ export function scoresUnlocked(entryCount: number): boolean {
   return entryCount >= SCORE_UNLOCK_THRESHOLD;
 }
 
-/** SQL fragment ordering rows by TIER_ORDER (liked, fine, disliked). */
-const tierOrderSql = sql`case ${entries.tier} when 'liked' then 0 when 'fine' then 1 when 'disliked' then 2 else 3 end`;
+/** The subset of a game's columns the ranked-list read path actually needs — narrower than `Game` to keep TOAST-able columns (summary, platforms) off the hottest query. */
+export type RankedEntryGame = Pick<Game, "id" | "igdbId" | "name" | "coverImageId" | "firstReleaseDate">;
 
 export type RankedEntry = {
   id: Entry["id"];
-  userId: Entry["userId"];
   gameId: Entry["gameId"];
   tier: Entry["tier"];
   position: Entry["position"];
   score: number;
-  createdAt: Entry["createdAt"];
-  updatedAt: Entry["updatedAt"];
-  game: Game;
+  game: RankedEntryGame;
 };
 
 /** Derives a game's 0-10 score by interpolating its position within its tier's band (a lone entry gets `hi`), rounded to one decimal. */
@@ -52,38 +49,38 @@ export function computeScore(index: number, count: number, tier: Tier): number {
 
 const rankedEntrySelection = {
   id: entries.id,
-  userId: entries.userId,
   gameId: entries.gameId,
   tier: entries.tier,
   position: entries.position,
   score: entries.score,
-  createdAt: entries.createdAt,
-  updatedAt: entries.updatedAt,
-  game: games,
+  game: {
+    id: games.id,
+    igdbId: games.igdbId,
+    name: games.name,
+    coverImageId: games.coverImageId,
+    firstReleaseDate: games.firstReleaseDate,
+  },
 };
 
 function toRankedEntry(row: {
   id: number;
-  userId: string;
   gameId: number;
   tier: Tier;
   position: number;
   score: string;
-  createdAt: Date;
-  updatedAt: Date;
-  game: Game;
+  game: RankedEntryGame;
 }): RankedEntry {
   return { ...row, score: Number(row.score) };
 }
 
-/** All of a user's entries, ordered by tier (liked, fine, disliked) then position. */
+/** All of a user's entries, ordered by tier (liked, fine, disliked, matching the enum's declaration order) then position — lets the index serve the sort directly instead of an explicit CASE. */
 export async function getRankedEntries(dbOrTx: DbOrTx, userId: string): Promise<RankedEntry[]> {
   const rows = await dbOrTx
     .select(rankedEntrySelection)
     .from(entries)
     .innerJoin(games, eq(entries.gameId, games.id))
     .where(eq(entries.userId, userId))
-    .orderBy(tierOrderSql, entries.position);
+    .orderBy(entries.tier, entries.position);
 
   return rows.map(toRankedEntry);
 }
@@ -228,21 +225,38 @@ export async function removeEntry(tx: Tx, userId: string, entryId: number): Prom
   await recomputeTierScores(tx, userId, entry.tier);
 }
 
-/** Recomputes every score in `tier` from its current position order, normalizing positions to a dense 0..n-1 range. */
+/** Renumbers `tier` to a dense 0..n-1 and rewrites every score in one statement. The arithmetic mirrors `computeScore`'s
+    IEEE-754 double math bit-for-bit — exact `numeric` arithmetic disagrees at .05 ties (e.g. disliked index 5 of 7: 0.5
+    vs 0.6), and casting float8 to numeric loses precision at ~16 significant digits, which also flips ties. Verified
+    identical to computeScore for every index, all three tiers, n = 1..400. */
 export async function recomputeTierScores(tx: Tx, userId: string, tier: Tier): Promise<void> {
-  const rows = await tx
-    .select({ id: entries.id })
-    .from(entries)
-    .where(and(eq(entries.userId, userId), eq(entries.tier, tier)))
-    .orderBy(entries.position);
+  const { lo, hi } = TIER_BANDS[tier];
 
-  const count = rows.length;
-
-  for (let i = 0; i < count; i++) {
-    const score = computeScore(i, count, tier);
-    await tx
-      .update(entries)
-      .set({ position: i, score: score.toFixed(1) })
-      .where(eq(entries.id, rows[i].id));
-  }
+  await tx.execute(sql`
+    with ranked as (
+      select id,
+             (row_number() over (order by position, id))::int - 1 as rn,
+             (count(*) over ())::int as cnt
+      from ${entries}
+      where ${entries.userId} = ${userId} and ${entries.tier} = ${tier}
+    ),
+    interpolated as (
+      select id, rn, cnt,
+             ((${hi}::float8 - (rn::float8 * (${hi}::float8 - ${lo}::float8)) / ((cnt - 1)::float8)) * 10::float8) as x
+      from ranked
+    ),
+    scored as (
+      select id, rn,
+             (case
+                when cnt = 1 then ${hi}::numeric(3,1)
+                else ((case when x - floor(x) >= 0.5 then floor(x) + 1 else floor(x) end)::numeric / 10)::numeric(3,1)
+              end) as score
+      from interpolated
+    )
+    update ${entries} as e
+    set position = s.rn, score = s.score
+    from scored s
+    where e.id = s.id
+      and (e.position is distinct from s.rn or e.score is distinct from s.score)
+  `);
 }
