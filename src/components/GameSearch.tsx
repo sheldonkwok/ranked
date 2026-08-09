@@ -1,6 +1,6 @@
 "use client";
 
-import { Cog, X } from "lucide-react";
+import { Cog, Joystick, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import CoverImage from "@/components/CoverImage";
@@ -21,6 +21,8 @@ export type GameSearchResult = {
 
 type SteamLibraryResult = GameSearchResult & { playtimeForever: number };
 
+type PlatformOption = { igdbId: number; label: string; gameCount: number };
+
 type SearchState =
   | { kind: "idle" }
   | { kind: "loading" }
@@ -39,6 +41,18 @@ type FranchiseState =
   | { kind: "error"; message: string }
   | { kind: "results"; franchiseName: string | null; results: GameSearchResult[] };
 
+type ConsoleListState =
+  | { kind: "idle" }
+  | { kind: "loading" }
+  | { kind: "error"; message: string }
+  | { kind: "results"; consoles: PlatformOption[] };
+
+type PlatformGamesState =
+  | { kind: "idle" }
+  | { kind: "loading" }
+  | { kind: "error"; message: string }
+  | { kind: "results"; results: GameSearchResult[] };
+
 const MIN_QUERY_LENGTH = 2;
 const DEBOUNCE_MS = 300;
 
@@ -46,6 +60,26 @@ const DEBOUNCE_MS = 300;
 function formatPlaytime(minutes: number): string {
   if (minutes < 60) return `${minutes}m`;
   return `${Math.round(minutes / 60)}h`;
+}
+
+/** Shared tail for every "browse" mode's results: an empty panel or a `panel()`-wrapped `<ul>` of rows. */
+function ResultsList<T>({
+  results,
+  emptyLabel,
+  renderItem,
+}: {
+  results: T[];
+  emptyLabel: string;
+  renderItem: (item: T) => React.ReactNode;
+}) {
+  if (results.length === 0) {
+    return (
+      <div className={panel({ className: "px-10 py-10 text-center text-[14px] tracking-[1px] text-ink-faint" })}>
+        {emptyLabel}
+      </div>
+    );
+  }
+  return <ul className={panel({ className: "flex flex-col p-1.5" })}>{results.map(renderItem)}</ul>;
 }
 
 function GameResultRow({
@@ -92,6 +126,29 @@ function GameResultRow({
   );
 }
 
+function ConsoleRow({ option, onSelect }: { option: PlatformOption; onSelect: () => void }) {
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={onSelect}
+        className={row({
+          className: "grid w-full items-center gap-4 p-[11px_14px] text-left mobile:gap-3 mobile:p-[9px_12px]",
+        })}
+        style={{ gridTemplateColumns: "1fr auto" }}
+      >
+        <span className="truncate text-[16px] text-ink" style={{ textShadow: "0 2px 4px rgba(0,0,0,0.9)" }}>
+          {option.label}
+        </span>
+        <div className="flex items-center gap-3">
+          <span className="text-xs tracking-[1px] text-ink-dim">{option.gameCount} ranked</span>
+          <span className="font-pixel text-[8px] text-gold-bright">PICK</span>
+        </div>
+      </button>
+    </li>
+  );
+}
+
 export default function GameSearch({
   onSelectAction,
   steamLinked,
@@ -105,10 +162,14 @@ export default function GameSearch({
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [state, setState] = useState<SearchState>({ kind: "idle" });
-  const [mode, setMode] = useState<"search" | "steam" | "franchise">(franchiseOf ? "franchise" : "search");
+  const [mode, setMode] = useState<"search" | "steam" | "franchise" | "platform">(franchiseOf ? "franchise" : "search");
   const [steamState, setSteamState] = useState<SteamState>({ kind: "idle" });
   const [franchiseState, setFranchiseState] = useState<FranchiseState>({ kind: "idle" });
+  const [consoleState, setConsoleState] = useState<ConsoleListState>({ kind: "idle" });
+  const [selectedPlatform, setSelectedPlatform] = useState<PlatformOption | null>(null);
+  const [platformGamesState, setPlatformGamesState] = useState<PlatformGamesState>({ kind: "idle" });
   const requestIdRef = useRef(0);
+  const platformRequestIdRef = useRef(0);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -240,6 +301,93 @@ export default function GameSearch({
     }
   }
 
+  const runConsoleFetch = useCallback(async () => {
+    setConsoleState({ kind: "loading" });
+
+    try {
+      const res = await fetch("/api/games/platforms");
+
+      if (!res.ok) {
+        setConsoleState({
+          kind: "error",
+          message: "Something went wrong loading your consoles. Try again.",
+        });
+        return;
+      }
+
+      const data = (await res.json()) as { platforms: PlatformOption[] };
+      setConsoleState({ kind: "results", consoles: data.platforms });
+    } catch {
+      setConsoleState({
+        kind: "error",
+        message: "Something went wrong loading your consoles. Try again.",
+      });
+    }
+  }, []);
+
+  const runPlatformGamesFetch = useCallback(async (option: PlatformOption) => {
+    const requestId = ++platformRequestIdRef.current;
+    setPlatformGamesState({ kind: "loading" });
+
+    try {
+      const res = await fetch(`/api/games/platforms/${option.igdbId}`);
+
+      if (requestId !== platformRequestIdRef.current) return;
+
+      if (res.status === 502) {
+        setPlatformGamesState({
+          kind: "error",
+          message: "Console listings are unavailable right now. Try again.",
+        });
+        return;
+      }
+
+      if (!res.ok) {
+        setPlatformGamesState({
+          kind: "error",
+          message: "Something went wrong loading console games. Try again.",
+        });
+        return;
+      }
+
+      const data = (await res.json()) as { results: GameSearchResult[] };
+      if (requestId !== platformRequestIdRef.current) return;
+      setPlatformGamesState({ kind: "results", results: data.results });
+    } catch {
+      if (requestId !== platformRequestIdRef.current) return;
+      setPlatformGamesState({
+        kind: "error",
+        message: "Something went wrong loading console games. Try again.",
+      });
+    }
+  }, []);
+
+  // Fetch the console list once per mount (first time the joystick opens) — toggling back to search and reopening just re-shows the cached state.
+  function handleTogglePlatform() {
+    if (mode === "platform") {
+      setMode("search");
+      return;
+    }
+    // Leaving franchise mode for the platform browser: drop `?franchise=` so backing out later (or re-mounting) doesn't silently re-lock into franchise mode.
+    if (mode === "franchise") {
+      router.replace("/add", { scroll: false });
+    }
+    setMode("platform");
+    if (consoleState.kind === "idle") {
+      runConsoleFetch();
+    }
+  }
+
+  function handleSelectConsole(option: PlatformOption) {
+    setSelectedPlatform(option);
+    runPlatformGamesFetch(option);
+  }
+
+  function handleBackToConsoles() {
+    setSelectedPlatform(null);
+    setPlatformGamesState({ kind: "idle" });
+  }
+
   const runFranchiseFetch = useCallback(async (name: string) => {
     setFranchiseState({ kind: "loading" });
 
@@ -316,23 +464,37 @@ export default function GameSearch({
                   ? franchiseState.kind === "results" && franchiseState.franchiseName
                     ? `${franchiseState.franchiseName.toUpperCase()} SERIES`
                     : `${franchiseOf?.toUpperCase()} FRANCHISE`
-                  : "SEARCH A TITLE"
+                  : mode === "platform"
+                    ? selectedPlatform
+                      ? `${selectedPlatform.label.toUpperCase()} TOP RATED`
+                      : "SELECT A CONSOLE"
+                    : "SEARCH A TITLE"
             }
             disabled={mode !== "search"}
             // biome-ignore lint/a11y/noAutofocus: this is the sole control on a dedicated /add search step, not a page loaded incidentally
             autoFocus
             className="flex-1 bg-transparent py-1 text-[17px] tracking-[1px] text-ink outline-none placeholder:text-ink-placeholder disabled:opacity-50"
           />
-          {mode === "franchise" && (
+          {(mode === "franchise" || (mode === "platform" && selectedPlatform)) && (
             <button
               type="button"
-              onClick={handleExitFranchise}
+              onClick={mode === "franchise" ? handleExitFranchise : handleBackToConsoles}
               className={iconButton({ className: "flex items-center" })}
-              aria-label="Clear franchise filter"
+              aria-label={mode === "franchise" ? "Clear franchise filter" : "Back to consoles"}
             >
               <X size={20} strokeWidth={2.5} aria-hidden="true" />
             </button>
           )}
+          <button
+            type="button"
+            onClick={handleTogglePlatform}
+            className={iconButton({ className: "flex items-center" })}
+            data-state={mode === "platform" ? "active" : undefined}
+            aria-pressed={mode === "platform"}
+            aria-label="Browse by console"
+          >
+            <Joystick size={20} strokeWidth={2.5} aria-hidden="true" />
+          </button>
           {steamLinked && (
             <button
               type="button"
@@ -352,6 +514,10 @@ export default function GameSearch({
             (franchiseState.kind === "results" && franchiseState.franchiseName
               ? `Games in the ${franchiseState.franchiseName} series you haven't ranked yet.`
               : `Games in the same franchise as ${franchiseOf} that you haven't ranked yet.`)}
+          {mode === "platform" &&
+            (selectedPlatform
+              ? `Top games on ${selectedPlatform.label} you haven't ranked yet.`
+              : "Consoles you've already ranked games on.")}
           {mode === "search" && "Results appear as you type — press Enter to search now."}
         </p>
       </form>
@@ -369,47 +535,31 @@ export default function GameSearch({
         <Banner variant="error">{state.message}</Banner>
       )}
 
-      {mode === "search" &&
-        trimmedQuery.length >= MIN_QUERY_LENGTH &&
-        state.kind === "results" &&
-        state.results.length === 0 && (
-          <div className={panel({ className: "px-10 py-10 text-center text-[14px] tracking-[1px] text-ink-faint" })}>
-            NO CARTRIDGES FOUND
-          </div>
-        )}
-
-      {mode === "search" &&
-        trimmedQuery.length >= MIN_QUERY_LENGTH &&
-        state.kind === "results" &&
-        state.results.length > 0 && (
-          <ul className={panel({ className: "flex flex-col p-1.5" })}>
-            {state.results.map((game) => (
-              <GameResultRow key={game.igdbId} game={game} onSelect={() => onSelectAction(game)} />
-            ))}
-          </ul>
-        )}
+      {mode === "search" && trimmedQuery.length >= MIN_QUERY_LENGTH && state.kind === "results" && (
+        <ResultsList
+          results={state.results}
+          emptyLabel="NO CARTRIDGES FOUND"
+          renderItem={(game) => <GameResultRow key={game.igdbId} game={game} onSelect={() => onSelectAction(game)} />}
+        />
+      )}
 
       {mode === "steam" && steamState.kind === "loading" && <PixelLoader label="Loading your Steam library…" />}
 
       {mode === "steam" && steamState.kind === "error" && <Banner variant="error">{steamState.message}</Banner>}
 
-      {mode === "steam" && steamState.kind === "results" && steamState.results.length === 0 && (
-        <div className={panel({ className: "px-10 py-10 text-center text-[14px] tracking-[1px] text-ink-faint" })}>
-          NOTHING LEFT TO RANK
-        </div>
-      )}
-
-      {mode === "steam" && steamState.kind === "results" && steamState.results.length > 0 && (
-        <ul className={panel({ className: "flex flex-col p-1.5" })}>
-          {steamState.results.map((game) => (
+      {mode === "steam" && steamState.kind === "results" && (
+        <ResultsList
+          results={steamState.results}
+          emptyLabel="NOTHING LEFT TO RANK"
+          renderItem={(game) => (
             <GameResultRow
               key={game.igdbId}
               game={game}
               rightLabel={formatPlaytime(game.playtimeForever)}
               onSelect={() => onSelectAction(game)}
             />
-          ))}
-        </ul>
+          )}
+        />
       )}
 
       {mode === "franchise" && franchiseState.kind === "loading" && <PixelLoader label="Finding franchise games…" />}
@@ -418,18 +568,46 @@ export default function GameSearch({
         <Banner variant="error">{franchiseState.message}</Banner>
       )}
 
-      {mode === "franchise" && franchiseState.kind === "results" && franchiseState.results.length === 0 && (
-        <div className={panel({ className: "px-10 py-10 text-center text-[14px] tracking-[1px] text-ink-faint" })}>
-          NOTHING LEFT IN THIS FRANCHISE
-        </div>
+      {mode === "franchise" && franchiseState.kind === "results" && (
+        <ResultsList
+          results={franchiseState.results}
+          emptyLabel="NOTHING LEFT IN THIS FRANCHISE"
+          renderItem={(game) => <GameResultRow key={game.igdbId} game={game} onSelect={() => onSelectAction(game)} />}
+        />
       )}
 
-      {mode === "franchise" && franchiseState.kind === "results" && franchiseState.results.length > 0 && (
-        <ul className={panel({ className: "flex flex-col p-1.5" })}>
-          {franchiseState.results.map((game) => (
-            <GameResultRow key={game.igdbId} game={game} onSelect={() => onSelectAction(game)} />
-          ))}
-        </ul>
+      {mode === "platform" && !selectedPlatform && consoleState.kind === "loading" && (
+        <PixelLoader label="Loading your consoles…" />
+      )}
+
+      {mode === "platform" && !selectedPlatform && consoleState.kind === "error" && (
+        <Banner variant="error">{consoleState.message}</Banner>
+      )}
+
+      {mode === "platform" && !selectedPlatform && consoleState.kind === "results" && (
+        <ResultsList
+          results={consoleState.consoles}
+          emptyLabel="NO CONSOLES YET"
+          renderItem={(option) => (
+            <ConsoleRow key={option.igdbId} option={option} onSelect={() => handleSelectConsole(option)} />
+          )}
+        />
+      )}
+
+      {mode === "platform" && selectedPlatform && platformGamesState.kind === "loading" && (
+        <PixelLoader label={`Loading top games on ${selectedPlatform.label}…`} />
+      )}
+
+      {mode === "platform" && selectedPlatform && platformGamesState.kind === "error" && (
+        <Banner variant="error">{platformGamesState.message}</Banner>
+      )}
+
+      {mode === "platform" && selectedPlatform && platformGamesState.kind === "results" && (
+        <ResultsList
+          results={platformGamesState.results}
+          emptyLabel="NOTHING LEFT ON THIS CONSOLE"
+          renderItem={(game) => <GameResultRow key={game.igdbId} game={game} onSelect={() => onSelectAction(game)} />}
+        />
       )}
     </div>
   );

@@ -212,8 +212,8 @@ export async function getGameByIgdbId(igdbId: number): Promise<IgdbGame | null> 
   return results.length > 0 ? normalizeGame(results[0]) : null;
 }
 
-// Narrower than GAME_TYPES: main games, remakes, remasters, ports. DLC and bundles dominate a raw franchise listing.
-const FRANCHISE_GAME_TYPES = "(0,8,9,11)";
+// Narrower than GAME_TYPES: main games, remakes, remasters, ports. DLC and bundles dominate a raw franchise/platform listing.
+const MAIN_GAME_TYPES = "(0,8,9,11)";
 // Wider than FRANCHISE_RESULT_LIMIT in the API route, since already-ranked games are filtered out server-side after this fetch.
 const FRANCHISE_FETCH_LIMIT = 30;
 
@@ -238,9 +238,21 @@ export async function getFranchiseGames(igdbId: number): Promise<FranchiseGames>
   if (groups.length === 0) return { franchiseName: null, games: [] };
 
   const ids = groups.map((group) => group.id);
-  const body = `${GAME_FIELDS} where ${field} = (${ids.join(",")}) & id != ${igdbId} & version_parent = null & game_type = ${FRANCHISE_GAME_TYPES} & total_rating_count > 0 & cover != null; sort total_rating_count desc; limit ${FRANCHISE_FETCH_LIMIT};`;
+  const body = `${GAME_FIELDS} where ${field} = (${ids.join(",")}) & id != ${igdbId} & version_parent = null & game_type = ${MAIN_GAME_TYPES} & total_rating_count > 0 & cover != null; sort total_rating_count desc; limit ${FRANCHISE_FETCH_LIMIT};`;
   const games = (await igdbRequest<RawIgdbGame[]>("games", body)).map(normalizeGame);
   return { franchiseName: groups[0].name, games };
+}
+
+// Wider than the platform browser's result limit, since already-ranked games are filtered out server-side after this fetch.
+const PLATFORM_FETCH_LIMIT = 30;
+
+/** A platform's most-rated games — the "top of the console" listing behind /add's joystick browser. */
+export async function getTopGamesByPlatform(platformIgdbId: number): Promise<IgdbGame[]> {
+  if (!Number.isInteger(platformIgdbId) || platformIgdbId <= 0) {
+    throw new Error(`getTopGamesByPlatform: platformIgdbId must be a positive integer, got ${platformIgdbId}`);
+  }
+  const body = `${GAME_FIELDS} where platforms = (${platformIgdbId}) & version_parent = null & game_type = ${MAIN_GAME_TYPES} & total_rating_count > 0 & cover != null; sort total_rating_count desc; limit ${PLATFORM_FETCH_LIMIT};`;
+  return (await igdbRequest<RawIgdbGame[]>("games", body)).map(normalizeGame);
 }
 
 // Steam library name resolution: Steam and IGDB titles frequently disagree, so resolving a Steam name is two passes — an exact-ish `name`/`alternative_names` match, then a wildcard fallback used only as a candidate generator re-verified by `pickBestMatch` (an unverified top-1 pick is worse than no match).

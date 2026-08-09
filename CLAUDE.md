@@ -40,6 +40,7 @@ never entered by hand.
 
 - `src/app/` — pages: `/` (ranked list), `/add` (search → tier → compare), `/sign-in`, `/settings`
 - `src/app/api/` — `auth/twitch[/callback]`, `auth/sign-out`, `games/search`,
+  `games/franchise`, `games/steam-library`, `games/platforms` (+ `[igdbId]`),
   `entries` (+ `[id]`, `[id]/rerank`); shared helpers in `api/_lib/`
 - `src/components/` — RankedList, ComparisonModal, TierPicker, GameSearch, etc.
 - `src/db/` — `schema.ts` (users, sessions, games, entries), `index.ts` (driver switch)
